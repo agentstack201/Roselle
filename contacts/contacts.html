@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>عرض جهات الاتصال</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="topbar">
+  <span>المستخدم: <b id="who"></b></span>
+  <a href="#" onclick="logout()">تسجيل الخروج</a>
+</div>
+
+<h1>دفتر جهات الاتصال</h1>
+<p class="note">مشروع مقرر CT1552</p>
+
+<div class="menu">
+  <a href="contacts.html">عرض جهات الاتصال</a>
+  <a href="add.html">إضافة جهة اتصال</a>
+</div>
+
+<div class="msg" id="msg"></div>
+
+<table>
+  <tr>
+    <th>الرقم</th>
+    <th>الاسم</th>
+    <th>رقم الجوال</th>
+    <th>الإجراءات</th>
+  </tr>
+  <tbody id="tbody">
+    <tr><td colspan="4">جارٍ التحميل...</td></tr>
+  </tbody>
+</table>
+
+<script src="db.js"></script>
+<script>
+if (requireLogin()) {
+  document.getElementById('who').textContent = sessionStorage.getItem('username');
+  showAll();
+}
+
+async function showAll() {
+  const tbody = document.getElementById('tbody');
+  const list = await getAll();
+
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4">لا توجد جهات اتصال</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+
+  for (const c of list) {
+    const tr = document.createElement('tr');
+
+    const td1 = document.createElement('td');
+    td1.textContent = c.id;
+
+    const td2 = document.createElement('td');
+    td2.textContent = c.name;
+
+    const td3 = document.createElement('td');
+    td3.textContent = c.phone;
+
+    const td4 = document.createElement('td');
+
+    const edit = document.createElement('a');
+    edit.href = 'edit.html?id=' + c.id;
+    edit.textContent = 'تعديل';
+
+    const del = document.createElement('button');
+    del.textContent = 'حذف';
+    del.onclick = function () { remove(c.id, c.name); };
+
+    td4.appendChild(edit);
+    td4.append(' ');
+    td4.appendChild(del);
+
+    tr.appendChild(td1);
+    tr.appendChild(td2);
+    tr.appendChild(td3);
+    tr.appendChild(td4);
+    tbody.appendChild(tr);
+  }
+}
+
+async function remove(id, name) {
+  if (!confirm('هل تريد حذف ' + name + ' ؟')) return;
+
+  await deleteContact(id);
+
+  const msg = document.getElementById('msg');
+  msg.textContent = 'تم الحذف بنجاح';
+  msg.className = 'msg show';
+
+  showAll();
+}
+</script>
+
+</body>
+</html>

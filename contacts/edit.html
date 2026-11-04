@@ -8,11 +8,16 @@
 </head>
 <body>
 
+<div class="topbar">
+  <span>المستخدم: <b id="who"></b></span>
+  <a href="#" onclick="logout()">تسجيل الخروج</a>
+</div>
+
 <h1>دفتر جهات الاتصال</h1>
 <p class="note">مشروع مقرر CT1552</p>
 
 <div class="menu">
-  <a href="index.html">عرض جهات الاتصال</a>
+  <a href="contacts.html">عرض جهات الاتصال</a>
   <a href="add.html">إضافة جهة اتصال</a>
 </div>
 
@@ -34,6 +39,11 @@
 <script>
 const id = new URLSearchParams(location.search).get('id');
 const msg = document.getElementById('msg');
+
+if (requireLogin()) {
+  document.getElementById('who').textContent = sessionStorage.getItem('username');
+  load();
+}
 
 async function load() {
   const c = await getOne(id);
@@ -65,8 +75,6 @@ document.getElementById('form').onsubmit = async function (e) {
   msg.textContent = 'تم التعديل بنجاح';
   msg.className = 'msg show';
 };
-
-load();
 </script>
 
 </body>

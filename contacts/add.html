@@ -8,11 +8,16 @@
 </head>
 <body>
 
+<div class="topbar">
+  <span>المستخدم: <b id="who"></b></span>
+  <a href="#" onclick="logout()">تسجيل الخروج</a>
+</div>
+
 <h1>دفتر جهات الاتصال</h1>
 <p class="note">مشروع مقرر CT1552</p>
 
 <div class="menu">
-  <a href="index.html">عرض جهات الاتصال</a>
+  <a href="contacts.html">عرض جهات الاتصال</a>
   <a href="add.html">إضافة جهة اتصال</a>
 </div>
 
@@ -32,6 +37,10 @@
 
 <script src="db.js"></script>
 <script>
+if (requireLogin()) {
+  document.getElementById('who').textContent = sessionStorage.getItem('username');
+}
+
 document.getElementById('form').onsubmit = async function (e) {
   e.preventDefault();
 
