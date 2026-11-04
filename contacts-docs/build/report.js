@@ -15,17 +15,12 @@ const INK = '000000';
 const BLUE = '1B4F8A';
 const GREY = '555555';
 const AUTO = LineRuleType.AUTO;
+const CW = 9314;
 
-const CONTENT_W = 9314;
-
-/* ---------- blocks ---------- */
 const P = (text, o = {}) => new Paragraph({
   alignment: o.align || AlignmentType.BOTH,
   spacing: { after: o.after ?? 120, line: 276, lineRule: AUTO },
-  children: [new TextRun({
-    text, font: SERIF, size: o.size || 22,
-    bold: o.bold, italics: o.italics, color: o.color || INK
-  })]
+  children: [new TextRun({ text, font: SERIF, size: o.size || 22, bold: o.bold, color: o.color || INK })]
 });
 
 const H1 = text => new Paragraph({
@@ -59,19 +54,18 @@ const SPACER = (h = 120) => new Paragraph({ spacing: { after: h }, children: [] 
 const BREAK = () => new Paragraph({ children: [new PageBreak()] });
 
 const CODE = lines => new Table({
-  width: { size: CONTENT_W, type: WidthType.DXA },
-  columnWidths: [CONTENT_W],
+  width: { size: CW, type: WidthType.DXA },
+  columnWidths: [CW],
   borders: {
     top: { style: BorderStyle.SINGLE, size: 6, color: '999999' },
     bottom: { style: BorderStyle.SINGLE, size: 6, color: '999999' },
     left: { style: BorderStyle.SINGLE, size: 18, color: INK },
     right: { style: BorderStyle.SINGLE, size: 6, color: '999999' },
-    insideHorizontal: { style: BorderStyle.NONE },
-    insideVertical: { style: BorderStyle.NONE }
+    insideHorizontal: { style: BorderStyle.NONE }, insideVertical: { style: BorderStyle.NONE }
   },
   rows: [new TableRow({
     children: [new TableCell({
-      width: { size: CONTENT_W, type: WidthType.DXA },
+      width: { size: CW, type: WidthType.DXA },
       shading: { type: ShadingType.CLEAR, fill: 'F4F4F4' },
       margins: { top: 120, bottom: 120, left: 160, right: 120 },
       children: lines.map(l => new Paragraph({
@@ -90,7 +84,6 @@ function TABLE(headers, rows, widths) {
     margins: { top: 70, bottom: 70, left: 110, right: 110 },
     verticalAlign: VerticalAlign.CENTER,
     children: [new Paragraph({
-      alignment: o.align || AlignmentType.LEFT,
       spacing: { after: 0, line: 252, lineRule: AUTO },
       children: [new TextRun({ text: t, font: SERIF, size: 20, bold: o.head })]
     })]
@@ -113,12 +106,12 @@ function TABLE(headers, rows, widths) {
   });
 }
 
-const FIG = (file, widthPx, srcW, srcH) => new Paragraph({
+const FIG = (file, w, sw, sh, type = 'jpg') => new Paragraph({
   alignment: AlignmentType.CENTER,
   spacing: { before: 140, after: 60 },
   children: [new ImageRun({
-    type: 'jpg', data: img(file),
-    transformation: { width: widthPx, height: Math.round(widthPx * srcH / srcW) }
+    type, data: img(file),
+    transformation: { width: w, height: Math.round(w * sh / sw) }
   })]
 });
 
@@ -133,41 +126,38 @@ const children = [];
 
 /* ---------- COVER ---------- */
 children.push(
-  SPACER(500),
+  SPACER(300),
   new Paragraph({
-    alignment: AlignmentType.CENTER, spacing: { after: 160 },
-    children: [new ImageRun({
-      type: 'jpg', data: img('0-ksu.jpg'),
-      transformation: { width: 92, height: 109 }
-    })]
+    alignment: AlignmentType.CENTER, spacing: { after: 120 },
+    children: [new ImageRun({ type: 'jpg', data: img('0-ksu.jpg'), transformation: { width: 80, height: 95 } })]
   }),
   new Paragraph({
-    alignment: AlignmentType.CENTER, spacing: { after: 420 },
-    children: [new TextRun({ text: 'King Saud University', font: SERIF, size: 26, bold: true })]
+    alignment: AlignmentType.CENTER, spacing: { after: 300 },
+    children: [new TextRun({ text: 'King Saud University', font: SERIF, size: 25, bold: true })]
   }),
   new Paragraph({
     alignment: AlignmentType.CENTER, spacing: { after: 40 },
-    border: { top: { style: BorderStyle.SINGLE, size: 12, color: INK, space: 12 } },
-    children: [new TextRun({ text: 'Contacts Directory', font: SERIF, size: 44, bold: true })]
+    border: { top: { style: BorderStyle.SINGLE, size: 12, color: INK, space: 11 } },
+    children: [new TextRun({ text: 'Contacts Directory', font: SERIF, size: 42, bold: true })]
   }),
   new Paragraph({
-    alignment: AlignmentType.CENTER, spacing: { after: 10 },
-    children: [new TextRun({ text: 'A Web Application Connected to a Database', font: SERIF, size: 26 })]
+    alignment: AlignmentType.CENTER, spacing: { after: 8 },
+    children: [new TextRun({ text: 'A Web Application Connected to a Database', font: SERIF, size: 25 })]
   }),
   new Paragraph({
-    alignment: AlignmentType.CENTER, spacing: { after: 420 },
-    border: { bottom: { style: BorderStyle.SINGLE, size: 12, color: INK, space: 12 } },
-    children: [new TextRun({ text: 'دفتر جهات الاتصال', font: SERIF, size: 24, color: BLUE })]
+    alignment: AlignmentType.CENTER, spacing: { after: 300 },
+    border: { bottom: { style: BorderStyle.SINGLE, size: 12, color: INK, space: 11 } },
+    children: [new TextRun({ text: 'دفتر جهات الاتصال', font: SERIF, size: 23, color: BLUE })]
   }),
   new Paragraph({
-    alignment: AlignmentType.CENTER, spacing: { after: 160 },
-    children: [new TextRun({ text: 'Prepared by:', font: SERIF, size: 24, bold: true })]
+    alignment: AlignmentType.CENTER, spacing: { after: 130 },
+    children: [new TextRun({ text: 'Prepared by:', font: SERIF, size: 23, bold: true })]
   })
 );
 
-const W = [700, 4000, 2300];
+const W = [650, 3700, 2150];
 children.push(new Table({
-  width: { size: 7000, type: WidthType.DXA },
+  width: { size: 6500, type: WidthType.DXA },
   columnWidths: W,
   alignment: AlignmentType.CENTER,
   borders: {
@@ -184,20 +174,20 @@ children.push(new Table({
       children: ['#', 'Student Name', 'Student ID'].map((h, i) => new TableCell({
         width: { size: W[i], type: WidthType.DXA },
         shading: { type: ShadingType.CLEAR, fill: 'E8E8E8' },
-        margins: { top: 80, bottom: 80, left: 110, right: 110 },
+        margins: { top: 70, bottom: 70, left: 100, right: 100 },
         children: [new Paragraph({
           alignment: AlignmentType.CENTER,
-          children: [new TextRun({ text: h, font: SERIF, size: 21, bold: true })]
+          children: [new TextRun({ text: h, font: SERIF, size: 20, bold: true })]
         })]
       }))
     }),
     ...[1, 2, 3, 4].map(n => new TableRow({
       children: [String(n), '', ''].map((t, i) => new TableCell({
         width: { size: W[i], type: WidthType.DXA },
-        margins: { top: 110, bottom: 110, left: 110, right: 110 },
+        margins: { top: 95, bottom: 95, left: 100, right: 100 },
         children: [new Paragraph({
           alignment: AlignmentType.CENTER,
-          children: [new TextRun({ text: t, font: SERIF, size: 21 })]
+          children: [new TextRun({ text: t, font: SERIF, size: 20 })]
         })]
       }))
     }))
@@ -205,18 +195,30 @@ children.push(new Table({
 }));
 
 children.push(
-  SPACER(420),
+  SPACER(260),
   new Paragraph({
-    alignment: AlignmentType.CENTER, spacing: { after: 40 },
-    children: [new TextRun({ text: 'College of Applied Studies', font: SERIF, size: 22 })]
+    alignment: AlignmentType.CENTER, spacing: { after: 34 },
+    children: [new TextRun({ text: 'College of Applied Studies', font: SERIF, size: 21 })]
   }),
   new Paragraph({
-    alignment: AlignmentType.CENTER, spacing: { after: 40 },
-    children: [new TextRun({ text: 'Program of Natural Sciences and Engineering', font: SERIF, size: 22 })]
+    alignment: AlignmentType.CENTER, spacing: { after: 34 },
+    children: [new TextRun({ text: 'Program of Natural Sciences and Engineering', font: SERIF, size: 21 })]
   }),
   new Paragraph({
-    alignment: AlignmentType.CENTER, spacing: { after: 0 },
-    children: [new TextRun({ text: 'CT1552 — 1447 (1)', font: SERIF, size: 22, bold: true })]
+    alignment: AlignmentType.CENTER, spacing: { after: 160 },
+    children: [new TextRun({ text: 'CT1552 — 1447 (1)', font: SERIF, size: 21, bold: true })]
+  }),
+  new Paragraph({
+    alignment: AlignmentType.CENTER, spacing: { before: 0, after: 50, line: 200, lineRule: AUTO },
+    children: [new TextRun({ text: 'Scan to open the live application', font: SERIF, size: 18, bold: true })]
+  }),
+  new Paragraph({
+    alignment: AlignmentType.CENTER, spacing: { before: 0, after: 30 },
+    children: [new ImageRun({ type: 'png', data: img('0-qr.png'), transformation: { width: 86, height: 86 } })]
+  }),
+  new Paragraph({
+    alignment: AlignmentType.CENTER, spacing: { before: 0, after: 0, line: 180, lineRule: AUTO },
+    children: [new TextRun({ text: 'contacts-ct1552.vercel.app', font: SERIF, size: 15, color: GREY })]
   }),
   BREAK()
 );
@@ -224,90 +226,105 @@ children.push(
 /* ---------- FIRST ---------- */
 children.push(
   H1('First: Project Function'),
-  P('The project is a small web application for keeping a directory of contacts. Each contact consists of a name and a mobile number, and the user can view the whole directory, add a new contact, change the details of an existing one, or remove one entirely.'),
-  P('All records are stored in a PostgreSQL database hosted on Supabase, so the data stays available after the browser is closed and is the same for anyone who opens the site.'),
+  P('The project is a web application for keeping a directory of contacts. Access is controlled by a login page, and once signed in the user can view the stored contacts, add a new one, change the details of an existing one, or delete one.'),
+  P('Every record is held in a PostgreSQL database hosted on Supabase, so the data remains after the browser is closed and is the same for anyone who opens the site.'),
 
   H2('Main Objectives'),
+  BULLET('To control access to the application through a login page.'),
   BULLET('To display the stored contacts in a clear table.'),
   BULLET('To allow a new contact to be added through a simple form.'),
   BULLET('To allow the details of an existing contact to be changed.'),
   BULLET('To allow a contact to be deleted from the directory.'),
-  BULLET('To keep all of this connected to a real backend database.'),
 
   H2('How the Application Works'),
-  NUM('The user opens the main page, which reads the contacts from the database and shows them in a table.'),
+  NUM('The user opens the site and is met by the login page, which checks the entered credentials against the users table in the database.'),
+  NUM('After a correct login the directory page opens and reads the contacts from the database into a table.'),
   NUM('Choosing "add" opens a form with two fields, and saving it inserts a new row into the database.'),
-  NUM('Choosing "edit" next to a contact opens the same two fields already filled with that contact’s details, and saving updates the row.'),
-  NUM('Choosing "delete" asks for confirmation and then removes the row from the database.'),
-  NUM('After every operation the table is read again, so the page always shows the current data.'),
+  NUM('Choosing "edit" beside a contact opens the same fields already filled with that contact’s details, and saving updates the row.'),
+  NUM('Choosing "delete" asks for confirmation and then removes the row.'),
+  NUM('Choosing "logout" ends the session and returns to the login page.'),
 
   H2('Types of Data Handled'),
   SPACER(60),
   TABLE(
-    ['Field', 'Description', 'Type'],
+    ['Table', 'Field', 'Description'],
     [
-      ['id', 'Record number, generated automatically by the database', 'BIGINT'],
-      ['name', 'The name of the contact', 'TEXT'],
-      ['phone', 'The mobile number of the contact', 'TEXT'],
-      ['created_at', 'The date the contact was added', 'TIMESTAMPTZ']
+      ['users', 'username, password', 'The credentials checked at login'],
+      ['contacts', 'id', 'Record number, generated automatically'],
+      ['contacts', 'name', 'The name of the contact'],
+      ['contacts', 'phone', 'The mobile number of the contact'],
+      ['contacts', 'created_at', 'The date the contact was added']
     ],
-    [1700, 5400, 2214]
+    [1700, 2800, 4814]
   ),
   SPACER(140),
 
   H2('Nature of the Application'),
-  P('The application is an online one. The records are not kept inside the browser but in a database on a server, so the same directory appears on any device that opens the site and the data is not lost if the browser is cleared.'),
-  BREAK()
+  P('The application is an online one. The records are not kept inside the browser but in a database on a server, so the same directory appears on any device that opens the site and the data is not lost if the browser is cleared.')
 );
 
 /* ---------- SECOND ---------- */
 children.push(
   H1('Second: Application Pages and Their Functions'),
-  P('The application consists of three pages, each with a single clear purpose. A small menu at the top of every page moves between them.'),
+  P('The application consists of four pages. The first controls access, and the other three carry out the operations on the stored records. A small bar at the top of every page shows the signed-in user and offers a logout link.'),
 
-  H2('1. Display Page (index.html)'),
-  P('This is the main page. It reads all the contacts from the database and shows them in a table containing the record number, the name and the mobile number. Next to every row there are two controls: a link that opens the edit page for that contact, and a button that deletes it.'),
-  FIG('1-list.jpg', 440, 1480, 790),
-  CAP('Figure 1 — The display page listing the stored contacts'),
+  H2('1. Login Page (index.html)'),
+  P('This is the page the site opens on. It contains two fields, the user name and the password, and a login button. The entered values are checked against the users table in the database, and the user is only allowed through if a matching record is found.'),
+  FIG('1-login.jpg', 330, 1480, 1120),
+  CAP('Figure 1 — The login page'),
+  P('If the credentials do not match any record, the application does not move on and a clear message is shown instead.'),
+  FIG('2-login-error.jpg', 330, 1480, 1120),
+  CAP('Figure 2 — The message shown when the credentials are wrong'),
 
-  H2('2. Add Page (add.html)'),
-  P('This page contains the form used to add a new contact. It has two fields, the name and the mobile number, and a save button. The two fields are required, and a message appears on the page to confirm the addition or to report a problem.'),
-  FIG('2-add.jpg', 400, 1480, 650),
-  CAP('Figure 2 — The add form before saving'),
-  FIG('3-add-done.jpg', 400, 1480, 748),
-  CAP('Figure 3 — The confirmation message after the contact has been saved'),
+  H2('2. Display Page (contacts.html)'),
+  P('After a correct login the directory opens. It reads all the contacts from the database and shows them in a table containing the record number, the name and the mobile number. Beside every row there is a link that opens the edit page for that contact and a button that deletes it.'),
+  FIG('3-list.jpg', 430, 1480, 876),
+  CAP('Figure 3 — The directory after signing in'),
 
-  P('Returning to the display page shows the new contact at the end of the table, which confirms that the record was written to the database and not only to the screen.'),
-  FIG('4-after-add.jpg', 440, 1480, 892),
-  CAP('Figure 4 — The directory after adding a new contact'),
+  H2('3. Add Page (add.html)'),
+  P('This page holds the form used to add a new contact. Both fields are required, and a message appears on the page to confirm the addition.'),
+  FIG('4-add.jpg', 400, 1480, 736),
+  CAP('Figure 4 — The add form before saving'),
+  FIG('5-add-done.jpg', 400, 1480, 834),
+  CAP('Figure 5 — The confirmation after the contact has been saved'),
 
-  H2('3. Edit Page (edit.html)'),
-  P('The edit page receives the record number through the address of the page, reads that contact from the database, and fills the two fields with its current details. Changing a field and saving updates the row in the database.'),
-  FIG('5-edit.jpg', 400, 1480, 650),
-  CAP('Figure 5 — The edit form with the mobile number being changed'),
-  FIG('6-edit-done.jpg', 400, 1480, 748),
-  CAP('Figure 6 — The confirmation message after the update'),
+  P('Returning to the directory shows the new contact at the end of the table, which confirms that the record reached the database and was not only shown on the screen.'),
+  FIG('6-after-add.jpg', 430, 1480, 978),
+  CAP('Figure 6 — The directory after adding a contact'),
 
-  P('The change is visible immediately on the display page, where the mobile number of the edited contact now shows the new value.'),
-  FIG('7-after-edit.jpg', 440, 1480, 892),
-  CAP('Figure 7 — The directory after the update'),
+  H2('4. Edit Page (edit.html)'),
+  P('The edit page receives the record number through the address of the page, reads that contact from the database, and fills the fields with its current details. Changing a field and saving updates the row.'),
+  FIG('7-edit.jpg', 400, 1480, 736),
+  CAP('Figure 7 — The edit form with the mobile number being changed'),
+  FIG('8-edit-done.jpg', 400, 1480, 834),
+  CAP('Figure 8 — The confirmation after the update'),
 
-  H2('4. Deleting a Contact'),
-  P('Deleting is carried out from the display page. Pressing the delete button next to a contact asks for confirmation first, and only then is the row removed from the database and the table read again.'),
-  FIG('8-after-delete.jpg', 440, 1480, 888),
-  CAP('Figure 8 — The directory after the contact has been deleted')
+  P('The new value appears immediately in the directory.'),
+  FIG('9-after-edit.jpg', 430, 1480, 978),
+  CAP('Figure 9 — The directory after the update'),
+
+  H2('5. Deleting a Contact'),
+  P('Deleting is carried out from the directory page. Pressing the delete button beside a contact asks for confirmation first, and only then is the row removed from the database and the table read again.'),
+  FIG('10-after-delete.jpg', 430, 1480, 974),
+  CAP('Figure 10 — The directory after the contact has been deleted')
 );
 
 /* ---------- THIRD ---------- */
 children.push(
   H1('Third: The Database'),
-  P('The application is connected to a PostgreSQL database hosted on Supabase. It contains one table, named contacts, which holds every record the application works with.'),
-  FIG('9-db-schema.jpg', 540, 2200, 716),
-  CAP('Figure 9 — The structure of the contacts table'),
+  P('The application is connected to a PostgreSQL database hosted on Supabase. It holds two tables: users, which stores the credentials used at login, and contacts, which stores the records the application displays and changes.'),
+  FIG('11-db-schema.jpg', 500, 2160, 1104),
+  CAP('Figure 11 — The structure of the two tables'),
 
-  H2('Creating the Table'),
-  P('The table was created with the following statement:'),
+  H2('Creating the Tables'),
   CODE([
+    'CREATE TABLE users (',
+    '  id         BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,',
+    '  username   TEXT NOT NULL UNIQUE,',
+    '  password   TEXT NOT NULL,',
+    '  created_at TIMESTAMPTZ DEFAULT NOW()',
+    ');',
+    '',
     'CREATE TABLE contacts (',
     '  id         BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,',
     '  name       TEXT NOT NULL,',
@@ -315,18 +332,17 @@ children.push(
     '  created_at TIMESTAMPTZ DEFAULT NOW()',
     ');'
   ]),
-  P('The id column is the primary key and is generated automatically, so every contact receives its own number without the user having to enter one. The name and phone columns are marked NOT NULL, which means the database itself refuses an empty record even if the form were bypassed.'),
-  BREAK(),
+  P('The id column of each table is the primary key and is generated automatically, so every record receives its own number without the user entering one. The columns that must always carry a value are marked NOT NULL, which means the database itself refuses an incomplete record even if the form were bypassed, and username is marked UNIQUE so the same user name cannot be registered twice.'),
 
   H2('Stored Data'),
-  P('The following rows were read directly from the database and show the contacts that the application is working with.'),
-  FIG('10-db-data.jpg', 540, 2200, 674),
-  CAP('Figure 10 — The rows stored in the contacts table'),
+  P('The following rows were read directly from the database.'),
+  FIG('12-db-data.jpg', 500, 2160, 864),
+  CAP('Figure 12 — The rows stored in the two tables'),
 
   H2('Connecting to the Database'),
-  P('The connection is made over HTTPS using the interface that Supabase provides for the table. A single small file holds the address, the key and the five functions the pages need, and each page calls the function it requires.'),
+  P('The connection is made over HTTPS using the interface that Supabase provides for the tables. A single file holds the address, the key and the functions the pages need, and each page calls the function it requires.'),
   CODE([
-    "const URL = 'https://pvyxlnjnbicnwwmugfca.supabase.co/rest/v1/contacts';",
+    "const BASE = 'https://pvyxlnjnbicnwwmugfca.supabase.co/rest/v1';",
     '',
     'const HEAD = {',
     "  'apikey'       : KEY,",
@@ -339,26 +355,42 @@ children.push(
     "  const res = await fetch(URL + '?select=*&order=id.asc', { headers: HEAD });",
     '  return res.json();',
     '}'
-  ]),
-  BREAK()
+  ])
 );
 
 /* ---------- FOURTH ---------- */
 children.push(
   H1('Fourth: Data Manipulation'),
-  P('The project requires the website to display, add and update records through a form interface, and to allow records to be deleted. The application performs all four operations on the contacts table.'),
+  P('The project requires the website to display, add and update records through a form interface, and to allow records to be deleted. The application performs all four operations on the contacts table, and reads the users table when checking a login.'),
   SPACER(60),
   TABLE(
     ['Operation', 'Page', 'Method', 'What it does'],
     [
-      ['Display', 'index.html, edit.html', 'GET', 'Reads the contacts and shows them'],
+      ['Display', 'contacts.html, edit.html', 'GET', 'Reads the contacts and shows them'],
       ['Add', 'add.html', 'POST', 'Inserts a new contact'],
       ['Update', 'edit.html', 'PATCH', 'Changes an existing contact'],
-      ['Delete', 'index.html', 'DELETE', 'Removes a contact']
+      ['Delete', 'contacts.html', 'DELETE', 'Removes a contact'],
+      ['Login check', 'index.html', 'GET', 'Reads the matching user record']
     ],
-    [1500, 2700, 1200, 3914]
+    [1600, 2900, 1200, 3614]
   ),
   SPACER(160),
+
+  H2('Checking the login'),
+  CODE([
+    'async function checkLogin(username, password) {',
+    '  const res = await fetch(',
+    "    BASE + '/users?username=eq.' + encodeURIComponent(username) + '&select=*',",
+    '    { headers: HEAD }',
+    '  );',
+    '  const rows = await res.json();',
+    '',
+    '  if (rows.length === 0) return null;',
+    '  if (rows[0].password !== password) return null;',
+    '',
+    '  return rows[0];',
+    '}'
+  ]),
 
   H2('Adding'),
   CODE([
@@ -391,7 +423,18 @@ children.push(
     '  });',
     '}'
   ]),
-  BREAK()
+
+  H2('Protecting the pages'),
+  P('Every page that shows or changes records calls requireLogin() before anything else. A visitor who has not signed in is sent straight back to the login page.'),
+  CODE([
+    'function requireLogin() {',
+    "  if (!sessionStorage.getItem('username')) {",
+    "    location.href = 'index.html';",
+    '    return false;',
+    '  }',
+    '  return true;',
+    '}'
+  ])
 );
 
 /* ---------- FIFTH ---------- */
@@ -400,10 +443,10 @@ children.push(
   P('Validation is applied in three places, so that an incomplete record cannot reach the database.'),
 
   H2('In the browser'),
-  P('Both fields carry the required attribute, so the browser itself refuses to submit the form while either of them is empty.'),
+  P('Every field carries the required attribute, so the browser refuses to submit a form while any of them is empty.'),
 
   H2('In the page code'),
-  P('Before the record is sent, the values are trimmed and checked again. If either is empty the request is not made and a message is shown on the page instead.'),
+  P('Before a record is sent, the values are trimmed and checked again. If either is empty the request is not made and a message is shown on the page instead.'),
   CODE([
     "if (name === '' || phone === '') {",
     "  msg.textContent = 'الرجاء تعبئة جميع الحقول';",
@@ -413,8 +456,11 @@ children.push(
   ]),
 
   H2('In the database'),
-  P('The name and phone columns are declared NOT NULL, so the database refuses an empty value regardless of which page sent it. Deleting also asks the user to confirm before the record is removed, so a record cannot be lost by a single accidental press.'),
-  SPACER(140),
+  P('The columns that must carry a value are declared NOT NULL, so the database refuses an empty value whichever page sent it, and username is UNIQUE so a duplicate account cannot be created. Deleting also asks the user to confirm, so a record cannot be lost by one accidental press.'),
+
+  H2('A note on the password'),
+  P('The password is stored as ordinary text in the users table, which is suitable for a course exercise using a test account. A system in real use would store a hashed form of the password rather than the password itself, so that the stored value could not be read even by someone who reached the table.'),
+  BREAK(),
 
   H1('Sixth: Project Files'),
   P('The project is written in plain HTML, CSS and JavaScript and needs no additional programs to run.'),
@@ -422,15 +468,29 @@ children.push(
   TABLE(
     ['File', 'Function'],
     [
-      ['index.html', 'The display page, and the place where deleting is carried out'],
+      ['index.html', 'The login page, and the entry point of the site'],
+      ['contacts.html', 'The display page, and the place where deleting is carried out'],
       ['add.html', 'The form for adding a new contact'],
       ['edit.html', 'The form for changing an existing contact'],
-      ['style.css', 'The appearance of the three pages'],
-      ['db.js', 'The connection to the database and the five functions the pages use']
+      ['style.css', 'The appearance of the four pages'],
+      ['db.js', 'The connection to the database and the functions the pages use']
     ],
     [2400, 6914]
   ),
-  BREAK()
+  SPACER(160),
+
+  H2('Publishing'),
+  P('The application is published on the internet over HTTPS, and can be opened directly from the code printed on the cover of this report.'),
+  SPACER(60),
+  TABLE(
+    ['Item', 'Value'],
+    [
+      ['Live application', 'https://contacts-ct1552.vercel.app'],
+      ['Database', 'Supabase PostgreSQL 17, region eu-west-2'],
+      ['Test account', 'admin / 123456']
+    ],
+    [2400, 6914]
+  )
 );
 
 /* ---------- SEVENTH ---------- */
@@ -442,26 +502,24 @@ children.push(
     ['Requirement', 'How it is met'],
     [
       ['At least three core pages that display, add and update records',
-       'index.html displays the contacts, add.html adds a new one, and edit.html updates an existing one'],
+       'contacts.html displays the records, add.html adds a new one, and edit.html updates an existing one, with a login page in front of them'],
       ['A reliable connection with a backend database',
-       'A PostgreSQL database on Supabase holding the contacts table, reached over HTTPS'],
+       'A PostgreSQL database on Supabase holding the users and contacts tables, reached over HTTPS'],
       ['A user-friendly form interface to add, edit and delete records',
-       'The add and edit forms, and the delete button with its confirmation, all validated before the record is sent']
+       'The login form, the add and edit forms, and the delete button with its confirmation, all validated before anything is sent']
     ],
     [3000, 6314]
   ),
   SPACER(200),
 
   H2('Closing Note'),
-  P('The application covers the full set of operations on stored data through a small and readable set of files. The directory is deliberately simple, with one table and two fields, so that the connection with the database and the four operations performed on it can be followed clearly from end to end.'),
-  SPACER(260),
+  P('The application covers the full set of operations on stored data, from controlling who may reach the records through to adding, changing and removing them. The directory is deliberately simple, with two tables and two fields of real content, so that the connection with the database and the operations performed on it can be followed clearly from end to end.'),
+  SPACER(240),
   new Paragraph({
     alignment: AlignmentType.CENTER,
     border: { top: { style: BorderStyle.SINGLE, size: 12, color: INK, space: 10 } },
     spacing: { before: 200 },
-    children: [new TextRun({
-      text: 'Contacts Directory  ·  CT1552', font: SERIF, size: 20, color: GREY
-    })]
+    children: [new TextRun({ text: 'Contacts Directory  ·  CT1552', font: SERIF, size: 20, color: GREY })]
   })
 );
 
@@ -471,22 +529,12 @@ const doc = new Document({
   title: 'Contacts Directory — CT1552 Project Report',
   numbering: {
     config: [
-      {
-        reference: 'dots',
-        levels: [{
-          level: 0, format: LevelFormat.BULLET, text: '•',
+      { reference: 'dots', levels: [{ level: 0, format: LevelFormat.BULLET, text: '•',
           alignment: AlignmentType.LEFT,
-          style: { paragraph: { indent: { left: 520, hanging: 260 } }, run: { font: SERIF, size: 22 } }
-        }]
-      },
-      {
-        reference: 'steps',
-        levels: [{
-          level: 0, format: LevelFormat.DECIMAL, text: '%1.',
+          style: { paragraph: { indent: { left: 520, hanging: 260 } }, run: { font: SERIF, size: 22 } } }] },
+      { reference: 'steps', levels: [{ level: 0, format: LevelFormat.DECIMAL, text: '%1.',
           alignment: AlignmentType.LEFT,
-          style: { paragraph: { indent: { left: 520, hanging: 260 } }, run: { font: SERIF, size: 22 } }
-        }]
-      }
+          style: { paragraph: { indent: { left: 520, hanging: 260 } }, run: { font: SERIF, size: 22 } } }] }
     ]
   },
   styles: {
@@ -518,9 +566,7 @@ const doc = new Document({
         children: [new Paragraph({
           alignment: AlignmentType.CENTER,
           spacing: { before: 120 },
-          children: [new TextRun({
-            children: ['— ', PageNumber.CURRENT, ' —'], font: SERIF, size: 18, color: GREY
-          })]
+          children: [new TextRun({ children: ['— ', PageNumber.CURRENT, ' —'], font: SERIF, size: 18, color: GREY })]
         })]
       })
     },
