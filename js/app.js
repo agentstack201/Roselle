@@ -1,876 +1,822 @@
-/* ===== STATE ===== */
-const state = {
-  currentPage: 'home',
+/* ===================== STATE ===================== */
+const S = {
+  screen: 'home',
+  stack: [],
   products: [],
-  cart: JSON.parse(localStorage.getItem('roselle_cart') || '[]'),
   orders: [],
-  selectedProduct: null,
-  selectedOrder: null,
-  selectedQty: 1,
-  currentFilter: 'الكل',
-  deferredInstallPrompt: null,
-  swRegistration: null,
-  customer: JSON.parse(localStorage.getItem('roselle_customer') || 'null')
+  cart: load('roselle_cart', []),
+  favs: load('roselle_favs', []),
+  customer: load('roselle_customer', null),
+  cat: 'الكل',
+  product: null,
+  gallery: [],
+  galleryIndex: 0,
+  qty: 1,
+  installPrompt: null,
+  swReg: null,
+  confirmAction: null
 };
 
-/* ===== DOM HELPERS ===== */
+function load(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } }
+function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+
 const $ = id => document.getElementById(id);
-const qs = sel => document.querySelector(sel);
-const qsa = sel => document.querySelectorAll(sel);
+const money = n => Number(n).toLocaleString('en-US', { maximumFractionDigits: 0 });
 
-/* ===== HAPTIC ===== */
-function haptic(pattern = [10]) {
-  if (navigator.vibrate) navigator.vibrate(pattern);
+/* ===================== HAPTICS ===================== */
+const CAN_VIBRATE = typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
+const PATTERNS = { light: [9], medium: [16], strong: [26], ok: [12, 45, 20], warn: [22, 60, 22] };
+
+function haptic(kind = 'light') {
+  if (CAN_VIBRATE) { try { navigator.vibrate(PATTERNS[kind] || PATTERNS.light); } catch {} }
 }
 
-/* ===== TOAST ===== */
-let toastTimer;
-function showToast(msg, type = '') {
-  const toast = $('toast');
-  toast.textContent = msg;
-  toast.className = `toast ${type}`;
-  void toast.offsetWidth;
-  toast.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
-}
-
-/* ===== NAVIGATION ===== */
-function navigate(page) {
-  haptic([6]);
-  state.currentPage = page;
-  qsa('.page').forEach(p => p.classList.remove('active'));
-  qsa('.nav-item').forEach(n => n.classList.remove('active'));
-  const pageEl = $(`page-${page}`);
-  if (pageEl) pageEl.classList.add('active');
-  const navEl = qs(`.nav-item[data-page="${page}"]`);
-  if (navEl) navEl.classList.add('active');
-
-  // Load page data
-  if (page === 'home') renderHome();
-  if (page === 'products') renderProducts();
-  if (page === 'orders') renderOrders();
-  if (page === 'account') renderAccount();
-  if (page === 'cart') renderCart();
-
-  // Update URL
-  const url = page === 'home' ? '/' : `/?page=${page}`;
-  history.replaceState({ page }, '', url);
-}
-
-/* ===== CART ===== */
-function saveCart() {
-  localStorage.setItem('roselle_cart', JSON.stringify(state.cart));
-  updateCartBadge();
-}
-
-function updateCartBadge() {
-  const count = state.cart.reduce((s, i) => s + i.qty, 0);
-  const badge = $('cart-badge');
-  const navBadge = $('cart-nav-badge');
-  if (badge) {
-    badge.textContent = count;
-    badge.classList.toggle('visible', count > 0);
+/* Every tappable element vibrates + gets a visual press fallback */
+document.addEventListener('pointerdown', e => {
+  const t = e.target.closest('button,[data-tap],.card,.tab,.chip,.menu-row,.order,.fav');
+  if (!t || t.disabled) return;
+  haptic(t.dataset.haptic || 'light');
+  if (!CAN_VIBRATE) {
+    t.classList.remove('tapped');
+    void t.offsetWidth;
+    t.classList.add('tapped');
+    setTimeout(() => t.classList.remove('tapped'), 220);
   }
-  if (navBadge) {
-    navBadge.textContent = count;
-    navBadge.classList.toggle('visible', count > 0);
-  }
+}, { passive: true });
+
+/* ===================== TOAST ===================== */
+let toastT;
+function toast(msg, kind = '') {
+  const el = $('toast');
+  const ic = kind === 'ok' ? 'check' : kind === 'err' ? 'close' : 'info';
+  el.innerHTML = icon(ic) + `<span>${msg}</span>`;
+  el.className = 'toast ' + kind;
+  void el.offsetWidth;
+  el.classList.add('on');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => el.classList.remove('on'), 2600);
 }
 
-function addToCart(product, qty = 1) {
-  haptic([10, 30, 10]);
-  const existing = state.cart.find(i => i.id === product.id);
-  if (existing) {
-    existing.qty += qty;
-  } else {
-    state.cart.push({
-      id: product.id,
-      name: product.name_ar,
-      price: product.price,
-      image_url: product.image_url,
-      qty
-    });
-  }
-  saveCart();
-  showToast('✓ تمت الإضافة للسلة', 'success');
+/* ===================== BRAND MARK ===================== */
+const ROSE_MARK = `<svg viewBox="0 0 60 60" fill="none">
+  <path d="M30 41C18.5 39.2 11 31.4 11 20.8c0-3.9.9-7 2.7-9.8 3 8.7 8.6 14.4 16.3 17.2z" fill="currentColor" opacity=".5"/>
+  <path d="M30 41c11.5-1.8 19-9.6 19-20.2 0-3.9-.9-7-2.7-9.8-3 8.7-8.6 14.4-16.3 17.2z" fill="currentColor" opacity=".5"/>
+  <path d="M30 41.5c-5.9-5-9-11.9-9-18.9S24.1 9.1 30 4.5c5.9 4.6 9 11.1 9 18.1s-3.1 13.9-9 18.9z" fill="currentColor"/>
+  <path d="M30 41v14" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/>
+  <path d="M30 48c-3.6 0-7-2.2-8.4-5.6 3.8-1 7.1.6 8.4 5.6zM30 48c3.6 0 7-2.2 8.4-5.6-3.8-1-7.1.6-8.4 5.6z" fill="currentColor" opacity=".7"/>
+</svg>`;
+
+/* ===================== NAV ===================== */
+const TABS = [
+  { id: 'home', label: 'الرئيسية', ic: 'home' },
+  { id: 'store', label: 'المنتجات', ic: 'grid' },
+  { id: 'cart', label: 'السلة', ic: 'cart', badge: true },
+  { id: 'orders', label: 'طلباتي', ic: 'receipt' },
+  { id: 'account', label: 'حسابي', ic: 'user' }
+];
+
+function buildTabs() {
+  $('tabbar').innerHTML = TABS.map(t => `
+    <button class="tab" data-screen="${t.id}">
+      <span class="tab-ic">${icon(t.ic)}${t.badge ? '<span class="tab-badge" id="tabBadge">0</span>' : ''}</span>
+      <span>${t.label}</span>
+    </button>`).join('');
+  $('tabbar').querySelectorAll('.tab').forEach(b =>
+    b.addEventListener('click', () => go(b.dataset.screen)));
 }
 
-function removeFromCart(id) {
-  haptic([10]);
-  state.cart = state.cart.filter(i => i.id !== id);
-  saveCart();
+const TAB_IDS = TABS.map(t => t.id);
+
+function go(screen, push = true) {
+  if (push && S.screen !== screen) S.stack.push(S.screen);
+  if (TAB_IDS.includes(screen)) S.stack = [];
+  S.screen = screen;
+
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
+  $('s-' + screen)?.classList.add('on');
+
+  document.querySelectorAll('.tab').forEach(t =>
+    t.classList.toggle('on', t.dataset.screen === screen));
+
+  $('scroll').scrollTop = 0;
+  window.scrollTo(0, 0);
+  syncBar();
+
+  ({ home: renderHome, store: renderStore, cart: renderCart,
+     checkout: renderCheckout, orders: renderOrders,
+     account: renderAccount, admin: renderAdmin })[screen]?.();
+
+  history.replaceState({ screen }, '', screen === 'home' ? '/' : '/?v=' + screen);
+}
+
+function back() {
+  const prev = S.stack.pop();
+  go(prev || 'store', false);
+}
+
+/* App-bar left/right buttons change per screen */
+function syncBar() {
+  const r = $('barRight');
+  const onSub = !TAB_IDS.includes(S.screen);
+  r.innerHTML = onSub ? icon('back') : icon('search');
+  r.setAttribute('aria-label', onSub ? 'رجوع' : 'بحث');
+  r.onclick = onSub ? back : () => toast('البحث سيتوفّر قريباً');
+}
+
+/* ===================== CART ===================== */
+const SHIPPING = 25;
+const subtotal = () => S.cart.reduce((s, i) => s + i.price * i.qty, 0);
+const cartCount = () => S.cart.reduce((s, i) => s + i.qty, 0);
+
+function syncCart() {
+  save('roselle_cart', S.cart);
+  const n = cartCount();
+  [$('barBadge'), $('tabBadge')].forEach(b => {
+    if (!b) return;
+    b.textContent = n;
+    b.classList.toggle('on', n > 0);
+  });
+}
+
+function addToCart(p, qty = 1) {
+  const hit = S.cart.find(i => i.id === p.id);
+  if (hit) hit.qty += qty;
+  else S.cart.push({ id: p.id, name: p.name_ar, price: Number(p.price), img: p.image_url, qty });
+  syncCart();
+  haptic('ok');
+}
+
+function setQty(id, d) {
+  const i = S.cart.find(x => x.id === id);
+  if (!i) return;
+  i.qty += d;
+  if (i.qty < 1) S.cart = S.cart.filter(x => x.id !== id);
+  syncCart();
   renderCart();
 }
 
-function updateQty(id, delta) {
-  haptic([6]);
-  const item = state.cart.find(i => i.id === id);
-  if (!item) return;
-  item.qty = Math.max(0, item.qty + delta);
-  if (item.qty === 0) {
-    state.cart = state.cart.filter(i => i.id !== id);
-  }
-  saveCart();
+function dropItem(id) {
+  S.cart = S.cart.filter(i => i.id !== id);
+  syncCart();
   renderCart();
+  toast('أُزيل من السلة');
 }
 
-function getCartTotal() {
-  return state.cart.reduce((s, i) => s + i.price * i.qty, 0);
-}
-
-/* ===== RENDER HOME ===== */
-async function renderHome() {
-  const container = $('page-home');
-  if (!container) return;
-
-  // Install banner
-  const installBanner = $('install-banner');
-  if (state.deferredInstallPrompt && installBanner) {
-    installBanner.classList.add('visible');
+/* ===================== FAVOURITES ===================== */
+function toggleFav(id, el) {
+  const on = S.favs.includes(id);
+  S.favs = on ? S.favs.filter(f => f !== id) : [...S.favs, id];
+  save('roselle_favs', S.favs);
+  if (el) {
+    el.classList.toggle('on', !on);
+    el.innerHTML = icon(!on ? 'heartFill' : 'heart');
   }
-
-  // Load featured products
-  if (state.products.length === 0) await loadProducts();
-
-  const featured = state.products.slice(0, 4);
-  const grid = $('home-products-grid');
-  if (grid) {
-    grid.innerHTML = featured.map(renderProductCard).join('');
-    grid.querySelectorAll('.add-to-cart-btn').forEach(btn => {
-      btn.addEventListener('click', e => {
-        e.stopPropagation();
-        const id = btn.dataset.id;
-        const p = state.products.find(x => x.id === id);
-        if (p) addToCart(p);
-        btn.classList.add('added');
-        btn.innerHTML = '✓ تمت الإضافة';
-        setTimeout(() => {
-          btn.classList.remove('added');
-          btn.innerHTML = '🛒 أضف للسلة';
-        }, 1500);
-      });
-    });
-    grid.querySelectorAll('.product-card').forEach(card => {
-      card.addEventListener('click', e => {
-        if (e.target.classList.contains('add-to-cart-btn') || e.target.closest('.add-to-cart-btn')) return;
-        const id = card.dataset.id;
-        openProductDetail(id);
-      });
-    });
-  }
-
-  // Stats
-  renderHomeStats();
+  haptic(on ? 'light' : 'medium');
 }
 
-async function renderHomeStats() {
+/* ===================== DATA ===================== */
+async function fetchProducts(force = false) {
+  if (S.products.length && !force) return S.products;
   try {
-    const ordersCount = state.orders.length || (await db.query('orders', { limit: 1000 })).length;
-    const productsCount = state.products.length;
-    const statsEl = $('home-stats');
-    if (statsEl) {
-      statsEl.innerHTML = `
-        <div class="stat-card">
-          <div class="stat-icon">🌸</div>
-          <div class="stat-value">${productsCount}</div>
-          <div class="stat-label">منتج متاح</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon">📦</div>
-          <div class="stat-value">${ordersCount}</div>
-          <div class="stat-label">طلب مكتمل</div>
-        </div>
-      `;
-    }
-  } catch {}
-}
-
-/* ===== RENDER PRODUCT CARD ===== */
-function renderProductCard(p) {
-  const imgHtml = p.image_url
-    ? `<img class="product-img" src="${p.image_url}" alt="${p.name_ar}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
-    : '';
-  return `
-    <div class="product-card" data-id="${p.id}">
-      ${imgHtml}
-      <div class="product-img-placeholder" style="${p.image_url ? 'display:none' : ''}">🌸</div>
-      <div class="product-info">
-        <div class="product-name">${p.name_ar}</div>
-        <div class="product-price">${parseFloat(p.price).toFixed(0)} <span class="currency">ر.س</span></div>
-        <button class="add-to-cart-btn ripple" data-id="${p.id}">🛒 أضف للسلة</button>
-      </div>
-    </div>`;
-}
-
-/* ===== LOAD & RENDER PRODUCTS ===== */
-async function loadProducts() {
-  try {
-    state.products = await db.query('products', { order: 'created_at.asc' });
+    S.products = await db.query('products', { order: 'sort_order.asc' });
   } catch (e) {
-    console.error('Error loading products:', e);
-    state.products = [];
+    console.error(e);
+    toast('تعذّر تحميل المنتجات', 'err');
   }
+  return S.products;
 }
 
-async function renderProducts() {
-  const container = $('page-products');
-  if (!container) return;
-
-  const grid = $('products-grid');
-  if (!grid) return;
-
-  if (state.products.length === 0) {
-    grid.innerHTML = '<div class="loading"><div class="spinner"></div><p>جارٍ تحميل المنتجات...</p></div>';
-    await loadProducts();
-  }
-
-  renderProductsGrid();
-
-  // Category chips
-  const cats = ['الكل', ...new Set(state.products.map(p => p.category).filter(Boolean))];
-  const catsEl = $('category-chips');
-  if (catsEl) {
-    catsEl.innerHTML = cats.map(c =>
-      `<button class="cat-chip ${c === state.currentFilter ? 'active' : ''}" data-cat="${c}">${c}</button>`
-    ).join('');
-    catsEl.querySelectorAll('.cat-chip').forEach(chip => {
-      chip.addEventListener('click', () => {
-        haptic([6]);
-        state.currentFilter = chip.dataset.cat;
-        catsEl.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
-        chip.classList.add('active');
-        renderProductsGrid();
-      });
-    });
-  }
+function galleryOf(p) {
+  if (Array.isArray(p.gallery) && p.gallery.length) return p.gallery;
+  return p.image_url ? [p.image_url] : [];
 }
 
-function renderProductsGrid() {
-  const grid = $('products-grid');
-  if (!grid) return;
-  const filtered = state.currentFilter === 'الكل'
-    ? state.products
-    : state.products.filter(p => p.category === state.currentFilter);
+/* ===================== CARDS ===================== */
+function cardHTML(p) {
+  const fav = S.favs.includes(p.id);
+  return `
+  <article class="card" data-id="${p.id}">
+    <div class="card-media">
+      <div class="ph">${icon('bouquet')}</div>
+      ${p.image_url ? `<img src="${p.image_url}" alt="${p.name_ar}" loading="lazy" onerror="this.remove()">` : ''}
+      <button class="fav ${fav ? 'on' : ''}" data-fav="${p.id}" data-haptic="medium" aria-label="المفضلة">${icon(fav ? 'heartFill' : 'heart')}</button>
+    </div>
+    <div class="card-body">
+      <h4 class="card-name">${p.name_ar}</h4>
+      <div class="card-price">${money(p.price)} <small>ر.س</small></div>
+      <button class="btn-add" data-add="${p.id}" data-haptic="ok">${icon('cart')} إضافة للسلة</button>
+    </div>
+  </article>`;
+}
 
-  if (filtered.length === 0) {
-    grid.innerHTML = '<div class="loading"><p>لا توجد منتجات في هذه الفئة</p></div>';
-    return;
-  }
+function wireGrid(root) {
+  root.querySelectorAll('[data-fav]').forEach(b =>
+    b.addEventListener('click', e => { e.stopPropagation(); toggleFav(b.dataset.fav, b); }));
 
-  grid.innerHTML = filtered.map(renderProductCard).join('');
-  grid.querySelectorAll('.add-to-cart-btn').forEach(btn => {
-    btn.addEventListener('click', e => {
+  root.querySelectorAll('[data-add]').forEach(b =>
+    b.addEventListener('click', e => {
       e.stopPropagation();
-      const id = btn.dataset.id;
-      const p = state.products.find(x => x.id === id);
-      if (p) addToCart(p);
-      btn.classList.add('added');
-      btn.innerHTML = '✓ تمت الإضافة';
-      setTimeout(() => {
-        btn.classList.remove('added');
-        btn.innerHTML = '🛒 أضف للسلة';
-      }, 1500);
-    });
-  });
-  grid.querySelectorAll('.product-card').forEach(card => {
-    card.addEventListener('click', e => {
-      if (e.target.closest('.add-to-cart-btn')) return;
-      openProductDetail(card.dataset.id);
-    });
-  });
+      const p = S.products.find(x => x.id === b.dataset.add);
+      if (!p) return;
+      addToCart(p);
+      b.classList.add('done');
+      b.innerHTML = icon('check') + ' تمت الإضافة';
+      setTimeout(() => { b.classList.remove('done'); b.innerHTML = icon('cart') + ' إضافة للسلة'; }, 1400);
+    }));
+
+  root.querySelectorAll('.card').forEach(c =>
+    c.addEventListener('click', e => {
+      if (e.target.closest('[data-add],[data-fav]')) return;
+      openProduct(c.dataset.id);
+    }));
 }
 
-/* ===== PRODUCT DETAIL ===== */
-function openProductDetail(id) {
-  const p = state.products.find(x => x.id === id);
+/* ===================== HOME ===================== */
+async function renderHome() {
+  const hero = $('hero');
+  if (!hero.dataset.ready) {
+    hero.innerHTML = `
+      <img src="/images/taif-rose.jpg" alt="ورد الطائف" onerror="this.remove()">
+      <div class="hero-txt">
+        <h2>ورد الطائف الطبيعي</h2>
+        <p>من مزارع الطائف إلى بابك، بعبقٍ لا يُنسى</p>
+        <button class="hero-cta" data-go="store">تسوّق الآن ${icon('back')}</button>
+      </div>`;
+    hero.dataset.ready = '1';
+    hero.querySelector('[data-go]')?.addEventListener('click', () => go('store'));
+  }
+
+  await fetchProducts();
+
+  $('homeStats').innerHTML = [
+    ['bouquet', S.products.length, 'منتج'],
+    ['box', S.orders.length, 'طلب'],
+    ['heart', S.favs.length, 'مفضلة']
+  ].map(([i, v, l]) => `<div class="stat">${icon(i)}<b>${v}</b><span>${l}</span></div>`).join('');
+
+  const g = $('homeGrid');
+  g.innerHTML = S.products.slice(0, 4).map(cardHTML).join('');
+  wireGrid(g);
+}
+
+/* ===================== STORE ===================== */
+async function renderStore() {
+  const grid = $('storeGrid');
+  if (!S.products.length) {
+    grid.innerHTML = `<div class="loader"><div class="spin"></div><p>جارٍ تحميل المنتجات…</p></div>`;
+    await fetchProducts();
+  }
+
+  const CHIP_IC = {
+    'الكل': 'grid', 'ورد الطائف': 'bouquet',
+    'الفل السعودي': 'blossom', 'الأزهار المحلية': 'leaf'
+  };
+  const cats = ['الكل', ...new Set(S.products.map(p => p.category).filter(Boolean))];
+  $('chips').innerHTML = cats.map(c =>
+    `<button class="chip ${c === S.cat ? 'on' : ''}" data-cat="${c}">${icon(CHIP_IC[c] || 'blossom')}<span>${c}</span></button>`
+  ).join('');
+  $('chips').querySelectorAll('.chip').forEach(ch =>
+    ch.addEventListener('click', () => { S.cat = ch.dataset.cat; renderStore(); }));
+
+  const list = S.cat === 'الكل' ? S.products : S.products.filter(p => p.category === S.cat);
+  grid.innerHTML = list.length
+    ? list.map(cardHTML).join('')
+    : `<div class="loader"><p>لا توجد منتجات في هذا التصنيف</p></div>`;
+  wireGrid(grid);
+}
+
+/* ===================== PRODUCT DETAIL ===================== */
+function openProduct(id) {
+  const p = S.products.find(x => x.id === id);
   if (!p) return;
-  state.selectedProduct = p;
-  state.selectedQty = 1;
-  haptic([6]);
+  S.product = p;
+  S.qty = 1;
+  S.gallery = galleryOf(p);
+  S.galleryIndex = 0;
 
-  const imgHtml = p.image_url
-    ? `<img class="product-detail-img" src="${p.image_url}" alt="${p.name_ar}">`
-    : `<div class="product-detail-img-placeholder">🌸</div>`;
-
-  $('product-detail-content').innerHTML = `
-    ${imgHtml}
-    <div class="product-detail-name">${p.name_ar}</div>
-    <div class="product-detail-price">${parseFloat(p.price).toFixed(2)} <small>ر.س</small></div>
-    <div class="product-detail-meta">
-      <span class="meta-chip">📂 ${p.category || 'باقات'}</span>
-      <span class="meta-chip">📦 ${p.stock} متبقي</span>
-    </div>
-    <div class="product-detail-desc">${p.description_ar || p.description || 'زهور طازجة وجميلة من متجر روزيل.'}</div>
-    <div class="qty-selector">
-      <button class="qty-btn" id="detail-qty-minus">−</button>
-      <span class="qty-num" id="detail-qty">1</span>
-      <button class="qty-btn" id="detail-qty-plus">+</button>
-    </div>
-    <button class="btn-primary ripple" id="detail-add-btn">🛒 أضف للسلة</button>
-  `;
-
-  $('detail-qty-minus').addEventListener('click', () => {
-    if (state.selectedQty > 1) {
-      state.selectedQty--;
-      $('detail-qty').textContent = state.selectedQty;
-      haptic([6]);
-    }
-  });
-  $('detail-qty-plus').addEventListener('click', () => {
-    state.selectedQty++;
-    $('detail-qty').textContent = state.selectedQty;
-    haptic([6]);
-  });
-  $('detail-add-btn').addEventListener('click', () => {
-    addToCart(p, state.selectedQty);
-    closeSheet('product-detail-sheet');
-  });
-
-  openSheet('product-detail-sheet');
+  $('pName').textContent = p.name_ar;
+  $('pPrice').innerHTML = `${money(p.price)} <small>ر.س</small>`;
+  $('pDesc').textContent = p.description_ar || p.description || '';
+  $('pQty').textContent = '1';
+  paintGallery();
+  go('product');
 }
 
-/* ===== RENDER CART ===== */
-function renderCart() {
-  const cartItems = $('cart-items');
-  const cartEmpty = $('cart-empty');
-  const cartSummary = $('cart-summary');
-  const checkoutSection = $('checkout-section');
+function paintGallery() {
+  const p = S.product;
+  const src = S.gallery[S.galleryIndex];
+  const fav = S.favs.includes(p.id);
 
-  if (state.cart.length === 0) {
-    if (cartEmpty) cartEmpty.style.display = 'flex';
-    if (cartItems) cartItems.style.display = 'none';
-    if (cartSummary) cartSummary.style.display = 'none';
-    if (checkoutSection) checkoutSection.style.display = 'none';
+  $('pMedia').innerHTML = `
+    <div class="ph">${icon('bouquet')}</div>
+    ${src ? `<img src="${src}" alt="${p.name_ar}" onerror="this.remove()">` : ''}
+    <button class="fav ${fav ? 'on' : ''}" id="pFav" data-haptic="medium" aria-label="المفضلة">${icon(fav ? 'heartFill' : 'heart')}</button>
+    ${p.origin_badge ? `<div class="origin-tag">${icon('saudi')}<div><b>${p.category}</b><span>${p.origin_badge}</span></div></div>` : ''}`;
+
+  $('pFav').addEventListener('click', () => toggleFav(p.id, $('pFav')));
+
+  $('pDots').innerHTML = S.gallery.length > 1
+    ? S.gallery.map((_, i) => `<i class="${i === S.galleryIndex ? 'on' : ''}"></i>`).join('')
+    : '';
+}
+
+/* swipe between gallery images */
+let swipeX = null;
+$('pMedia').addEventListener('touchstart', e => { swipeX = e.changedTouches[0].clientX; }, { passive: true });
+$('pMedia').addEventListener('touchend', e => {
+  if (swipeX === null || S.gallery.length < 2) return;
+  const dx = e.changedTouches[0].clientX - swipeX;
+  swipeX = null;
+  if (Math.abs(dx) < 45) return;
+  const dir = dx > 0 ? -1 : 1;                       // RTL: swipe right → previous
+  S.galleryIndex = (S.galleryIndex + dir + S.gallery.length) % S.gallery.length;
+  haptic('light');
+  paintGallery();
+}, { passive: true });
+
+$('pMinus').addEventListener('click', () => {
+  if (S.qty > 1) { S.qty--; $('pQty').textContent = S.qty; }
+});
+$('pPlus').addEventListener('click', () => {
+  S.qty++; $('pQty').textContent = S.qty;
+});
+$('pAdd').addEventListener('click', () => {
+  addToCart(S.product, S.qty);
+  toast('أُضيف إلى السلة', 'ok');
+  go('cart');
+});
+
+/* ===================== CART ===================== */
+function renderCart() {
+  const w = $('cartWrap');
+  if (!S.cart.length) {
+    w.innerHTML = `
+      <div class="empty">
+        <div class="ring">${icon('cart')}</div>
+        <h3>سلتك فارغة</h3>
+        <p>تصفّح منتجاتنا وأضف ما يعجبك<br>لتبدأ تجربة تسوّق مميزة</p>
+        <button class="btn btn-primary" data-go="store">تصفّح المتجر</button>
+      </div>`;
+    w.querySelector('[data-go]').addEventListener('click', () => go('store'));
     return;
   }
 
-  if (cartEmpty) cartEmpty.style.display = 'none';
-  if (cartItems) cartItems.style.display = 'block';
-  if (cartSummary) cartSummary.style.display = 'block';
-  if (checkoutSection) checkoutSection.style.display = 'block';
-
-  if (cartItems) {
-    cartItems.innerHTML = state.cart.map(item => `
-      <div class="cart-item" data-id="${item.id}">
-        <div class="cart-item-img">
-          ${item.image_url ? `<img src="${item.image_url}" alt="${item.name}">` : '🌸'}
-        </div>
-        <div class="cart-item-info">
-          <div class="cart-item-name">${item.name}</div>
-          <div class="cart-item-price">${(item.price * item.qty).toFixed(2)} ر.س</div>
-          <div class="cart-qty">
-            <button class="qty-btn" onclick="updateQty('${item.id}', -1)">−</button>
-            <span class="qty-num">${item.qty}</span>
-            <button class="qty-btn" onclick="updateQty('${item.id}', 1)">+</button>
+  const sub = subtotal();
+  w.innerHTML = `
+    <div class="cart-list">
+      ${S.cart.map(i => `
+        <div class="cart-row">
+          <div class="cart-thumb">${i.img ? `<img src="${i.img}" alt="${i.name}" onerror="this.remove()">` : icon('bouquet')}</div>
+          <div class="cart-info">
+            <h4>${i.name}</h4>
+            <div class="p">${money(i.price * i.qty)} ر.س</div>
+            <div class="stepper">
+              <button data-q="-1" data-id="${i.id}" aria-label="إنقاص">${icon('minus')}</button>
+              <b>${i.qty}</b>
+              <button data-q="1" data-id="${i.id}" aria-label="زيادة">${icon('plus')}</button>
+            </div>
           </div>
-        </div>
-        <button class="cart-item-remove" onclick="removeFromCart('${item.id}')">🗑️</button>
-      </div>
-    `).join('');
-  }
+          <button class="cart-del" data-del="${i.id}" data-haptic="warn" aria-label="حذف">${icon('trash')}</button>
+        </div>`).join('')}
+    </div>
+    <div class="summary">
+      <div class="sum-row"><span>الإجمالي الفرعي</span><b>${money(sub)} ر.س</b></div>
+      <div class="sum-row"><span>رسوم التوصيل</span><b>${money(SHIPPING)} ر.س</b></div>
+      <div class="sum-row total"><span>المجموع</span><b>${money(sub + SHIPPING)} ر.س</b></div>
+    </div>
+    <div class="sticky-cta"><button class="btn btn-primary" id="toCheckout" data-haptic="medium">${icon('check')} متابعة الطلب</button></div>`;
 
-  const delivery = 15;
-  const subtotal = getCartTotal();
-  const total = subtotal + delivery;
+  w.querySelectorAll('[data-q]').forEach(b =>
+    b.addEventListener('click', () => setQty(b.dataset.id, Number(b.dataset.q))));
+  w.querySelectorAll('[data-del]').forEach(b =>
+    b.addEventListener('click', () => dropItem(b.dataset.del)));
+  $('toCheckout').addEventListener('click', () => go('checkout'));
+}
 
-  if (cartSummary) {
-    cartSummary.querySelector('#cart-subtotal').textContent = subtotal.toFixed(2) + ' ر.س';
-    cartSummary.querySelector('#cart-delivery').textContent = delivery.toFixed(2) + ' ر.س';
-    cartSummary.querySelector('#cart-total').textContent = total.toFixed(2) + ' ر.س';
+/* ===================== CHECKOUT ===================== */
+function renderCheckout() {
+  if (!S.cart.length) { go('cart'); return; }
+  const sub = subtotal();
+  $('coSub').textContent = money(sub) + ' ر.س';
+  $('coShip').textContent = money(SHIPPING) + ' ر.س';
+  $('coTotal').textContent = money(sub + SHIPPING) + ' ر.س';
+
+  if (S.customer) {
+    $('fName').value = S.customer.name || '';
+    $('fPhone').value = S.customer.phone || '';
+    $('fAddr').value = S.customer.address || '';
   }
 }
 
-/* ===== CHECKOUT ===== */
 async function placeOrder() {
-  haptic([10]);
-  const name = $('customer-name').value.trim();
-  const phone = $('customer-phone').value.trim();
-  const address = $('customer-address').value.trim();
-  const notes = $('order-notes').value.trim();
+  const name = $('fName').value.trim();
+  const phone = $('fPhone').value.trim();
+  const address = $('fAddr').value.trim();
+  const notes = $('fNotes').value.trim();
 
   if (!name || !phone || !address) {
-    showToast('⚠️ يرجى ملء جميع الحقول المطلوبة', 'error');
+    haptic('warn');
+    toast('أكمل الحقول المطلوبة', 'err');
     return;
   }
 
-  const btn = $('place-order-btn');
+  const btn = $('placeBtn');
   btn.disabled = true;
-  btn.innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:2px"></div> جارٍ تأكيد الطلب...';
+  btn.innerHTML = `<span class="spin" style="width:19px;height:19px;border-width:2px;border-top-color:#fff"></span> جارٍ التأكيد…`;
 
   try {
-    // Save or find customer
-    let customerId;
-    const existing = state.customer;
-    if (existing && existing.name === name) {
-      customerId = existing.id;
+    let customerId = S.customer?.id;
+    if (!customerId) {
+      const [c] = await db.insert('customers', { name, phone, address });
+      customerId = c.id;
+      S.customer = c;
     } else {
-      const [cust] = await db.insert('customers', { name, phone, address });
-      customerId = cust.id;
-      state.customer = cust;
-      localStorage.setItem('roselle_customer', JSON.stringify(cust));
+      await db.update('customers', customerId, { name, phone, address });
+      S.customer = { ...S.customer, name, phone, address };
     }
+    save('roselle_customer', S.customer);
 
-    // Create order
-    const delivery = 15;
-    const total = getCartTotal() + delivery;
     const [order] = await db.insert('orders', {
       customer_id: customerId,
-      total_amount: total,
+      total_amount: subtotal() + SHIPPING,
       notes,
       delivery_address: address,
       status: 'قيد الانتظار'
     });
 
-    // Create order items
-    for (const item of state.cart) {
-      await db.insert('order_items', {
-        order_id: order.id,
-        product_id: item.id,
-        quantity: item.qty,
-        unit_price: item.price
-      });
-    }
+    await db.insert('order_items', S.cart.map(i => ({
+      order_id: order.id, product_id: i.id, quantity: i.qty, unit_price: i.price
+    })));
 
-    // Clear cart
-    state.cart = [];
-    saveCart();
-    renderCart();
-
-    showToast('🎉 تم تأكيد طلبك بنجاح!', 'success');
-    haptic([50, 100, 50]);
-
-    // Go to orders
-    setTimeout(() => navigate('orders'), 1500);
+    S.cart = [];
+    syncCart();
+    $('fNotes').value = '';
+    haptic('ok');
+    toast('تم تأكيد طلبك بنجاح', 'ok');
+    go('orders');
   } catch (e) {
-    console.error('Order error:', e);
-    showToast('❌ حدث خطأ، يرجى المحاولة مجدداً', 'error');
+    console.error(e);
+    haptic('warn');
+    toast('تعذّر إرسال الطلب، حاول مجدداً', 'err');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '✅ تأكيد الطلب';
+    btn.textContent = 'تأكيد الطلب';
   }
 }
 
-/* ===== RENDER ORDERS ===== */
+/* ===================== ORDERS ===================== */
+const PILL = {
+  'قيد الانتظار': 'wait', 'قيد التجهيز': 'prep',
+  'تم التوصيل': 'done', 'ملغي': 'cancel'
+};
+const STATUSES = ['قيد الانتظار', 'قيد التجهيز', 'تم التوصيل', 'ملغي'];
+
+const fmtDate = s => new Date(s).toLocaleDateString('ar-SA',
+  { year: 'numeric', month: 'long', day: 'numeric' });
+
 async function renderOrders() {
-  const container = $('orders-container');
-  if (!container) return;
-
-  container.innerHTML = '<div class="loading"><div class="spinner"></div><p>جارٍ تحميل الطلبات...</p></div>';
-
-  try {
-    // Get customer orders if we have a customer
-    let orders;
-    if (state.customer) {
-      orders = await db.query('orders', {
-        select: '*',
-        filter: { customer_id: `eq.${state.customer.id}` },
-        order: 'created_at.desc'
-      });
-    } else {
-      orders = [];
-    }
-    state.orders = orders;
-
-    if (orders.length === 0) {
-      container.innerHTML = `
-        <div class="orders-empty">
-          <div class="orders-empty-icon">📦</div>
-          <h3>لا توجد طلبات بعد</h3>
-          <p>ابدئي بتسوقك من عالم الزهور الجميل</p>
-          <button class="btn-primary" style="max-width:220px" onclick="navigate('products')">تصفحي المنتجات 🌸</button>
-        </div>`;
-      return;
-    }
-
-    // Load order items for each order
-    const orderWithItems = await Promise.all(orders.map(async o => {
-      try {
-        const items = await db.query('order_items', {
-          select: 'quantity,unit_price,products(name_ar)',
-          filter: { order_id: `eq.${o.id}` }
-        });
-        return { ...o, items };
-      } catch {
-        return { ...o, items: [] };
-      }
-    }));
-
-    container.innerHTML = orderWithItems.map(o => `
-      <div class="order-card" data-id="${o.id}" onclick="openOrderDetail('${o.id}')">
-        <div class="order-header">
-          <div>
-            <div class="order-id">#${o.id.slice(-8).toUpperCase()}</div>
-            <div class="order-date">${formatDate(o.created_at)}</div>
-          </div>
-          <span class="order-status ${statusClass(o.status)}">${o.status}</span>
-        </div>
-        <div class="order-items-preview">
-          ${(o.items || []).map(i => `${i.products?.name_ar || 'منتج'} × ${i.quantity}`).join('، ') || 'بدون تفاصيل'}
-        </div>
-        <div class="order-footer">
-          <span class="order-total">${parseFloat(o.total_amount).toFixed(2)} ر.س</span>
-          <span style="color:var(--text-light);font-size:13px">عرض التفاصيل ←</span>
-        </div>
-      </div>
-    `).join('');
-  } catch (e) {
-    console.error('Orders error:', e);
-    container.innerHTML = '<div class="loading"><p>خطأ في تحميل الطلبات</p></div>';
-  }
-}
-
-/* ===== ORDER DETAIL ===== */
-async function openOrderDetail(id) {
-  haptic([6]);
-  const order = state.orders.find(o => o.id === id);
-  if (!order) return;
-  state.selectedOrder = order;
-
-  const content = $('order-detail-content');
-  content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-  openSheet('order-detail-sheet');
-
-  try {
-    const items = await db.query('order_items', {
-      select: 'quantity,unit_price,products(name_ar)',
-      filter: { order_id: `eq.${id}` }
-    });
-
-    content.innerHTML = `
-      <div class="order-detail-status">
-        <span class="order-status ${statusClass(order.status)}" style="font-size:14px;padding:8px 20px">${order.status}</span>
-      </div>
-      <div style="margin-bottom:16px">
-        <div style="font-size:12px;color:var(--text-light);margin-bottom:4px">رقم الطلب</div>
-        <div style="font-weight:600">#${order.id.slice(-8).toUpperCase()}</div>
-      </div>
-      <div style="margin-bottom:16px">
-        <div style="font-size:12px;color:var(--text-light);margin-bottom:4px">تاريخ الطلب</div>
-        <div style="font-weight:600">${formatDate(order.created_at)}</div>
-      </div>
-      ${order.delivery_address ? `
-      <div style="margin-bottom:16px">
-        <div style="font-size:12px;color:var(--text-light);margin-bottom:4px">عنوان التوصيل</div>
-        <div style="font-weight:600">${order.delivery_address}</div>
-      </div>` : ''}
-      <div class="form-section-title" style="margin-bottom:12px">🛒 المنتجات</div>
-      <div class="order-detail-items">
-        ${items.map(i => `
-          <div class="order-detail-item">
-            <span>${i.products?.name_ar || 'منتج'} × ${i.quantity}</span>
-            <span style="color:var(--burgundy);font-weight:600">${(i.unit_price * i.quantity).toFixed(2)} ر.س</span>
-          </div>
-        `).join('')}
-        <div class="order-detail-item" style="font-weight:700;border-top:2px solid var(--border)">
-          <span>الإجمالي</span>
-          <span style="color:var(--burgundy)">${parseFloat(order.total_amount).toFixed(2)} ر.س</span>
-        </div>
-      </div>
-      ${order.notes ? `
-      <div style="margin-bottom:16px">
-        <div style="font-size:12px;color:var(--text-light);margin-bottom:4px">ملاحظات</div>
-        <div style="font-size:14px;color:var(--text-secondary)">${order.notes}</div>
-      </div>` : ''}
-      <div class="form-section-title" style="margin-bottom:12px">✏️ تحديث الحالة</div>
-      <select class="update-status-select" id="order-status-select">
-        <option value="قيد الانتظار" ${order.status === 'قيد الانتظار' ? 'selected' : ''}>⏳ قيد الانتظار</option>
-        <option value="قيد التجهيز" ${order.status === 'قيد التجهيز' ? 'selected' : ''}>🔄 قيد التجهيز</option>
-        <option value="تم التوصيل" ${order.status === 'تم التوصيل' ? 'selected' : ''}>✅ تم التوصيل</option>
-        <option value="ملغي" ${order.status === 'ملغي' ? 'selected' : ''}>❌ ملغي</option>
-      </select>
-      <button class="btn-primary ripple" onclick="updateOrderStatus('${order.id}')">حفظ التغييرات</button>
-      <div style="height:12px"></div>
-      <button class="btn-danger" style="width:100%;border-radius:12px;padding:14px" onclick="confirmDeleteOrder('${order.id}')">🗑️ حذف الطلب</button>
-    `;
-  } catch (e) {
-    content.innerHTML = '<div class="loading"><p>خطأ في تحميل التفاصيل</p></div>';
-  }
-}
-
-async function updateOrderStatus(id) {
-  haptic([10]);
-  const status = $('order-status-select').value;
-  try {
-    await db.update('orders', id, { status, updated_at: new Date().toISOString() });
-    const order = state.orders.find(o => o.id === id);
-    if (order) order.status = status;
-    showToast('✓ تم تحديث حالة الطلب', 'success');
-    closeSheet('order-detail-sheet');
-    renderOrders();
-  } catch (e) {
-    showToast('❌ فشل التحديث', 'error');
-  }
-}
-
-async function confirmDeleteOrder(id) {
-  haptic([10, 50, 10]);
-  if (!confirm('هل تريدين حذف هذا الطلب نهائياً؟')) return;
-  try {
-    // Delete order items first
-    const items = await db.query('order_items', { filter: { order_id: `eq.${id}` } });
-    for (const item of items) {
-      await db.delete('order_items', item.id);
-    }
-    await db.delete('orders', id);
-    state.orders = state.orders.filter(o => o.id !== id);
-    showToast('تم حذف الطلب', '');
-    closeSheet('order-detail-sheet');
-    renderOrders();
-  } catch (e) {
-    showToast('❌ فشل الحذف', 'error');
-  }
-}
-
-/* ===== RENDER ACCOUNT ===== */
-function renderAccount() {
-  const c = state.customer;
-  const nameEl = $('account-name-display');
-  const emailEl = $('account-email-display');
-  if (nameEl) nameEl.textContent = c ? c.name : 'زائر';
-  if (emailEl) emailEl.textContent = c ? (c.phone || 'لا يوجد') : 'قم بتسجيل أول طلب';
-
-  const ordersCount = $('account-orders-count');
-  if (ordersCount) ordersCount.textContent = state.orders.length || '—';
-}
-
-/* ===== MANAGE PRODUCTS (Admin) ===== */
-async function openManageProducts() {
-  haptic([6]);
-  const content = $('manage-products-content');
-  content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-  openSheet('manage-products-sheet');
-
-  if (state.products.length === 0) await loadProducts();
-
-  content.innerHTML = `
-    <button class="btn-primary ripple" onclick="openAddProduct()" style="margin-bottom:16px">+ إضافة منتج جديد</button>
-    ${state.products.map(p => `
-      <div class="admin-card">
-        <div class="admin-card-header">
-          <div class="admin-card-title">${p.name_ar}</div>
-          <div>
-            <button class="btn-edit" onclick="openEditProduct('${p.id}')">✏️ تعديل</button>
-            <button class="btn-danger" onclick="deleteProduct('${p.id}')">🗑️</button>
-          </div>
-        </div>
-        <div style="font-size:13px;color:var(--text-secondary)">${parseFloat(p.price).toFixed(2)} ر.س | المخزون: ${p.stock}</div>
-      </div>
-    `).join('')}
-  `;
-}
-
-function openAddProduct() {
-  haptic([6]);
-  $('product-form-title').textContent = 'إضافة منتج جديد';
-  $('product-form-id').value = '';
-  $('product-form-name-ar').value = '';
-  $('product-form-name-en').value = '';
-  $('product-form-price').value = '';
-  $('product-form-stock').value = '10';
-  $('product-form-category').value = 'باقات';
-  $('product-form-desc-ar').value = '';
-  $('product-form-image').value = '';
-  openSheet('product-form-sheet');
-}
-
-function openEditProduct(id) {
-  haptic([6]);
-  const p = state.products.find(x => x.id === id);
-  if (!p) return;
-  $('product-form-title').textContent = 'تعديل المنتج';
-  $('product-form-id').value = p.id;
-  $('product-form-name-ar').value = p.name_ar;
-  $('product-form-name-en').value = p.name;
-  $('product-form-price').value = p.price;
-  $('product-form-stock').value = p.stock;
-  $('product-form-category').value = p.category || 'باقات';
-  $('product-form-desc-ar').value = p.description_ar || '';
-  $('product-form-image').value = p.image_url || '';
-  openSheet('product-form-sheet');
-}
-
-async function saveProduct() {
-  haptic([10]);
-  const id = $('product-form-id').value;
-  const data = {
-    name_ar: $('product-form-name-ar').value.trim(),
-    name: $('product-form-name-en').value.trim() || $('product-form-name-ar').value.trim(),
-    price: parseFloat($('product-form-price').value),
-    stock: parseInt($('product-form-stock').value),
-    category: $('product-form-category').value,
-    description_ar: $('product-form-desc-ar').value.trim(),
-    image_url: $('product-form-image').value.trim()
-  };
-
-  if (!data.name_ar || !data.price) {
-    showToast('⚠️ يرجى ملء الاسم والسعر', 'error');
+  const w = $('ordersWrap');
+  if (!S.customer) {
+    w.innerHTML = emptyOrders();
+    w.querySelector('[data-go]').addEventListener('click', () => go('store'));
     return;
   }
 
-  const btn = $('save-product-btn');
+  w.innerHTML = `<div class="loader"><div class="spin"></div><p>جارٍ تحميل طلباتك…</p></div>`;
+
+  try {
+    const rows = await db.query('orders', {
+      select: '*,order_items(quantity,unit_price,products(name_ar))',
+      filter: { customer_id: `eq.${S.customer.id}` },
+      order: 'created_at.desc'
+    });
+    S.orders = rows;
+
+    if (!rows.length) {
+      w.innerHTML = emptyOrders();
+      w.querySelector('[data-go]').addEventListener('click', () => go('store'));
+      return;
+    }
+
+    w.innerHTML = `<div class="orders">${rows.map(o => `
+      <div class="order" data-id="${o.id}">
+        <div class="order-top">
+          <div>
+            <div class="order-no">طلب #${o.id.slice(-6).toUpperCase()}</div>
+            <div class="order-date">${fmtDate(o.created_at)}</div>
+          </div>
+          <span class="pill ${PILL[o.status] || 'wait'}">${o.status}</span>
+        </div>
+        <div class="order-items">${(o.order_items || [])
+          .map(i => `${i.products?.name_ar || 'منتج'} × ${i.quantity}`).join(' · ') || '—'}</div>
+        <div class="order-bot">
+          <span class="order-total">${money(o.total_amount)} ر.س</span>
+          <span class="order-more">التفاصيل ${icon('back')}</span>
+        </div>
+      </div>`).join('')}</div><div style="height:18px"></div>`;
+
+    w.querySelectorAll('.order').forEach(c =>
+      c.addEventListener('click', () => openOrder(c.dataset.id)));
+  } catch (e) {
+    console.error(e);
+    w.innerHTML = `<div class="loader"><p>تعذّر تحميل الطلبات</p></div>`;
+  }
+}
+
+const emptyOrders = () => `
+  <div class="empty">
+    <div class="ring">${icon('receipt')}</div>
+    <h3>لا توجد طلبات بعد</h3>
+    <p>عند إتمام أول طلب ستجده هنا<br>مع إمكانية تتبّع حالته</p>
+    <button class="btn btn-primary" data-go="store">ابدأ التسوّق</button>
+  </div>`;
+
+function openOrder(id) {
+  const o = S.orders.find(x => x.id === id);
+  if (!o) return;
+
+  $('sheetOrderBody').innerHTML = `
+    <div style="text-align:center;padding-bottom:18px">
+      <span class="pill ${PILL[o.status] || 'wait'}" style="font-size:13px;padding:8px 18px">${o.status}</span>
+    </div>
+    ${[['رقم الطلب', '#' + o.id.slice(-6).toUpperCase()],
+       ['التاريخ', fmtDate(o.created_at)],
+       ['عنوان التوصيل', o.delivery_address || '—'],
+       ...(o.notes ? [['ملاحظات', o.notes]] : [])]
+      .map(([k, v]) => `<div style="margin-bottom:13px">
+          <div style="font-size:11.5px;color:var(--muted);margin-bottom:3px">${k}</div>
+          <div style="font-size:14px;font-weight:600">${v}</div></div>`).join('')}
+
+    <div class="form-head" style="padding:10px 0 10px">${icon('cart')} المنتجات</div>
+    ${(o.order_items || []).map(i => `
+      <div class="sum-row"><span>${i.products?.name_ar || 'منتج'} × ${i.quantity}</span>
+        <b style="color:var(--wine)">${money(i.unit_price * i.quantity)} ر.س</b></div>`).join('')}
+    <div class="sum-row total"><span>المجموع</span><b>${money(o.total_amount)} ر.س</b></div>
+
+    <div class="form-head" style="padding:20px 0 10px">${icon('edit')} تحديث الحالة</div>
+    <div class="field">
+      <select id="stSel">${STATUSES.map(s =>
+        `<option ${s === o.status ? 'selected' : ''}>${s}</option>`).join('')}</select>
+    </div>
+    <button class="btn btn-primary" id="stSave" data-haptic="medium">حفظ التغييرات</button>
+    <div style="height:10px"></div>
+    <button class="btn btn-danger" id="stDel" data-haptic="warn">${icon('trash')} حذف الطلب</button>
+    <div style="height:14px"></div>`;
+
+  $('stSave').addEventListener('click', async () => {
+    const status = $('stSel').value;
+    try {
+      await db.update('orders', o.id, { status, updated_at: new Date().toISOString() });
+      o.status = status;
+      closeSheet('sheetOrder');
+      toast('تم تحديث حالة الطلب', 'ok');
+      renderOrders();
+    } catch { toast('تعذّر التحديث', 'err'); }
+  });
+
+  $('stDel').addEventListener('click', () =>
+    confirmAsk('حذف الطلب', 'سيتم حذف هذا الطلب وجميع عناصره نهائياً. لا يمكن التراجع عن هذا الإجراء.', async () => {
+      try {
+        await db.deleteWhere('order_items', { order_id: `eq.${o.id}` });
+        await db.delete('orders', o.id);
+        S.orders = S.orders.filter(x => x.id !== o.id);
+        closeSheet('sheetOrder');
+        toast('تم حذف الطلب');
+        renderOrders();
+      } catch { toast('تعذّر الحذف', 'err'); }
+    }));
+
+  openSheet('sheetOrder');
+}
+
+/* ===================== ACCOUNT ===================== */
+function renderAccount() {
+  $('acctIc').innerHTML = icon('user');
+  $('acctName').textContent = S.customer?.name || 'زائر';
+  $('acctSub').textContent = S.customer?.phone || 'سجّل أول طلب لتظهر بياناتك هنا';
+
+  const items = [
+    ['receipt', 'طلباتي', `${S.orders.length} طلب`, () => go('orders')],
+    ['grid', 'إدارة المنتجات', 'إضافة وتعديل وحذف', () => go('admin')],
+    ['heart', 'المفضلة', `${S.favs.length} منتج`, () => { S.cat = 'الكل'; go('store'); }],
+    ['phone', 'تواصل معنا', '920001234', () => toast('هاتف خدمة العملاء: 920001234')],
+    ['info', 'عن التطبيق', 'Roselle · الإصدار 2.0', () => toast('Roselle — متجر الزهور السعودية')]
+  ];
+
+  $('acctMenu').innerHTML = items.map(([ic, t, s]) => `
+    <div class="menu-row">
+      <div class="menu-ic">${icon(ic)}</div>
+      <div class="menu-txt"><b>${t}</b><span>${s}</span></div>
+      ${icon('back')}
+    </div>`).join('');
+
+  $('acctMenu').querySelectorAll('.menu-row').forEach((r, i) =>
+    r.addEventListener('click', items[i][3]));
+}
+
+/* ===================== ADMIN (products CRUD) ===================== */
+async function renderAdmin() {
+  const w = $('adminList');
+  w.innerHTML = `<div class="loader"><div class="spin"></div></div>`;
+  await fetchProducts(true);
+
+  w.innerHTML = S.products.map(p => `
+    <div class="admin-row">
+      <div class="t"><b>${p.name_ar}</b><span>${money(p.price)} ر.س · المخزون ${p.stock}</span></div>
+      <button class="ibtn e" data-edit="${p.id}" aria-label="تعديل">${icon('edit')}</button>
+      <button class="ibtn d" data-del="${p.id}" data-haptic="warn" aria-label="حذف">${icon('trash')}</button>
+    </div>`).join('');
+
+  w.querySelectorAll('[data-edit]').forEach(b =>
+    b.addEventListener('click', () => productForm(b.dataset.edit)));
+
+  w.querySelectorAll('[data-del]').forEach(b =>
+    b.addEventListener('click', () => {
+      const p = S.products.find(x => x.id === b.dataset.del);
+      confirmAsk('حذف المنتج', `سيتم حذف «${p.name_ar}» نهائياً من المتجر.`, async () => {
+        try {
+          await db.delete('products', p.id);
+          S.products = S.products.filter(x => x.id !== p.id);
+          closeSheet('sheetConfirm');
+          toast('تم حذف المنتج');
+          renderAdmin();
+        } catch { toast('تعذّر الحذف — قد يكون مرتبطاً بطلبات', 'err'); }
+      });
+    }));
+}
+
+function productForm(id) {
+  const p = id ? S.products.find(x => x.id === id) : null;
+  $('pfTitle').textContent = p ? 'تعديل المنتج' : 'إضافة منتج';
+  $('pfId').value = p?.id || '';
+  $('pfNameAr').value = p?.name_ar || '';
+  $('pfNameEn').value = p?.name || '';
+  $('pfPrice').value = p?.price || '';
+  $('pfStock').value = p?.stock ?? 20;
+  $('pfCat').value = p?.category || 'ورد الطائف';
+  $('pfDesc').value = p?.description_ar || '';
+  $('pfImg').value = p?.image_url || '';
+  openSheet('sheetProduct');
+}
+
+async function saveProduct() {
+  const name_ar = $('pfNameAr').value.trim();
+  const price = parseFloat($('pfPrice').value);
+
+  if (!name_ar || !(price >= 0)) {
+    haptic('warn');
+    toast('الاسم والسعر مطلوبان', 'err');
+    return;
+  }
+
+  const data = {
+    name_ar,
+    name: $('pfNameEn').value.trim() || name_ar,
+    price,
+    stock: parseInt($('pfStock').value) || 0,
+    category: $('pfCat').value,
+    description_ar: $('pfDesc').value.trim(),
+    image_url: $('pfImg').value.trim() || null
+  };
+
+  const btn = $('pfSave');
   btn.disabled = true;
 
   try {
-    if (id) {
-      await db.update('products', id, data);
-      const idx = state.products.findIndex(p => p.id === id);
-      if (idx !== -1) state.products[idx] = { ...state.products[idx], ...data };
-      showToast('✓ تم تحديث المنتج', 'success');
-    } else {
-      const [newP] = await db.insert('products', data);
-      state.products.push(newP);
-      showToast('✓ تمت إضافة المنتج', 'success');
-    }
-    closeSheet('product-form-sheet');
-    openManageProducts();
+    const id = $('pfId').value;
+    if (id) await db.update('products', id, data);
+    else await db.insert('products', { ...data, origin_badge: 'منتج سعودي', sort_order: 99 });
+    closeSheet('sheetProduct');
+    toast(id ? 'تم تحديث المنتج' : 'تمت إضافة المنتج', 'ok');
+    renderAdmin();
   } catch (e) {
-    showToast('❌ حدث خطأ', 'error');
+    console.error(e);
+    toast('تعذّر الحفظ', 'err');
   } finally {
     btn.disabled = false;
   }
 }
 
-async function deleteProduct(id) {
-  haptic([10, 50, 10]);
-  if (!confirm('هل تريدين حذف هذا المنتج؟')) return;
-  try {
-    await db.delete('products', id);
-    state.products = state.products.filter(p => p.id !== id);
-    showToast('تم حذف المنتج', '');
-    openManageProducts();
-  } catch {
-    showToast('❌ فشل الحذف', 'error');
-  }
-}
-
-/* ===== SHEET HELPERS ===== */
+/* ===================== SHEETS ===================== */
 function openSheet(id) {
-  $('overlay').classList.add('active');
-  $(id).classList.add('active');
+  $('scrim').classList.add('on');
+  $(id).classList.add('on');
   document.body.style.overflow = 'hidden';
 }
-
 function closeSheet(id) {
-  $(id).classList.remove('active');
-  $('overlay').classList.remove('active');
+  $(id).classList.remove('on');
+  $('scrim').classList.remove('on');
+  document.body.style.overflow = '';
+}
+function closeAll() {
+  document.querySelectorAll('.sheet').forEach(s => s.classList.remove('on'));
+  $('scrim').classList.remove('on');
   document.body.style.overflow = '';
 }
 
-function closeAllSheets() {
-  qsa('.bottom-sheet').forEach(s => s.classList.remove('active'));
-  $('overlay').classList.remove('active');
-  document.body.style.overflow = '';
+function confirmAsk(title, msg, action) {
+  $('cfTitle').textContent = title;
+  $('cfMsg').textContent = msg;
+  S.confirmAction = action;
+  openSheet('sheetConfirm');
 }
 
-/* ===== HELPERS ===== */
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
-}
-
-function statusClass(status) {
-  const map = {
-    'قيد الانتظار': 'status-pending',
-    'قيد التجهيز': 'status-processing',
-    'تم التوصيل': 'status-delivered',
-    'ملغي': 'status-cancelled'
-  };
-  return map[status] || 'status-pending';
-}
-
-/* ===== PWA INSTALL ===== */
+/* ===================== PWA ===================== */
 function setupPWA() {
   window.addEventListener('beforeinstallprompt', e => {
     e.preventDefault();
-    state.deferredInstallPrompt = e;
-    const banner = $('install-banner');
-    if (banner) banner.classList.add('visible');
+    S.installPrompt = e;
+    if (!load('roselle_install_hidden', false)) $('installBanner').classList.add('on');
   });
 
   window.addEventListener('appinstalled', () => {
-    state.deferredInstallPrompt = null;
-    const banner = $('install-banner');
-    if (banner) banner.classList.remove('visible');
-    showToast('🎉 تم تثبيت Roselle على جهازك!', 'success');
+    S.installPrompt = null;
+    $('installBanner').classList.remove('on');
+    toast('تم تثبيت Roselle على جهازك', 'ok');
   });
 
-  const installBtn = $('install-btn');
-  if (installBtn) {
-    installBtn.addEventListener('click', async () => {
-      if (!state.deferredInstallPrompt) return;
-      haptic([10, 30, 10]);
-      state.deferredInstallPrompt.prompt();
-      const { outcome } = await state.deferredInstallPrompt.userChoice;
-      if (outcome === 'accepted') {
-        state.deferredInstallPrompt = null;
-      }
-    });
-  }
+  $('installIc').innerHTML = ICONS.download;
+  $('installX').innerHTML = icon('close');
 
-  const closeBanner = $('close-install-banner');
-  if (closeBanner) {
-    closeBanner.addEventListener('click', () => {
-      $('install-banner').classList.remove('visible');
-    });
-  }
+  $('installBtn').addEventListener('click', async () => {
+    if (!S.installPrompt) return;
+    haptic('medium');
+    S.installPrompt.prompt();
+    await S.installPrompt.userChoice;
+    S.installPrompt = null;
+    $('installBanner').classList.remove('on');
+  });
+
+  $('installX').addEventListener('click', () => {
+    save('roselle_install_hidden', true);
+    $('installBanner').classList.remove('on');
+  });
 }
 
-/* ===== SERVICE WORKER ===== */
-async function setupServiceWorker() {
+async function setupSW() {
   if (!('serviceWorker' in navigator)) return;
   try {
     const reg = await navigator.serviceWorker.register('/sw.js');
-    state.swRegistration = reg;
+    S.swReg = reg;
     reg.addEventListener('updatefound', () => {
-      const newWorker = reg.installing;
-      newWorker.addEventListener('statechange', () => {
-        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-          const updateBanner = $('update-banner');
-          if (updateBanner) updateBanner.classList.add('visible');
-        }
+      const nw = reg.installing;
+      nw?.addEventListener('statechange', () => {
+        if (nw.state === 'installed' && navigator.serviceWorker.controller)
+          $('updateBar').classList.add('on');
       });
     });
-  } catch (e) {
-    console.error('SW registration failed:', e);
-  }
+  } catch (e) { console.error('SW:', e); }
 }
 
-function applyUpdate() {
-  if (state.swRegistration && state.swRegistration.waiting) {
-    state.swRegistration.waiting.postMessage('SKIP_WAITING');
-    location.reload();
-  }
+function netStatus() {
+  const bar = $('offlineBar');
+  const off = !navigator.onLine;
+  bar.classList.toggle('on', off);
+  if (off) bar.innerHTML = icon('info') + ' أنت غير متصل — التصفّح متاح، وإرسال الطلبات يحتاج اتصالاً';
 }
 
-/* ===== INIT ===== */
-async function init() {
-  // Splash screen
-  setTimeout(() => {
-    const splash = $('splash');
-    if (splash) splash.classList.add('hidden');
-  }, 2000);
+/* ===================== INIT ===================== */
+function init() {
+  $('brandMark').innerHTML = ROSE_MARK;
+  $('goIc').innerHTML = ICONS.back;
+  $('coIc').innerHTML = ICONS.mapPin;
+  $('pMinus').innerHTML = icon('minus');
+  $('pPlus').innerHTML = icon('plus');
+  $('pAdd').innerHTML = icon('cart') + ' إضافة للسلة';
 
-  // Setup PWA
+  buildTabs();
+  syncCart();
   setupPWA();
-  setupServiceWorker();
+  setupSW();
+  netStatus();
 
-  // Update cart badge
-  updateCartBadge();
+  addEventListener('online', netStatus);
+  addEventListener('offline', netStatus);
 
-  // Setup nav
-  qsa('.nav-item').forEach(item => {
-    item.addEventListener('click', () => navigate(item.dataset.page));
+  $('barCart').insertAdjacentHTML('afterbegin', ICONS.cart);
+  $('barCart').addEventListener('click', () => go('cart'));
+
+  $('updateBtn').addEventListener('click', () => {
+    S.swReg?.waiting?.postMessage('SKIP_WAITING');
+    location.reload();
   });
 
-  // Overlay
-  $('overlay').addEventListener('click', closeAllSheets);
+  $('scrim').addEventListener('click', closeAll);
+  document.querySelectorAll('[data-close]').forEach(b => {
+    b.innerHTML = icon('close');
+    b.addEventListener('click', () => closeSheet(b.dataset.close));
+  });
 
-  // Check URL for initial page
-  const params = new URLSearchParams(location.search);
-  const initPage = params.get('page') || 'home';
-  navigate(initPage);
+  $('placeBtn').addEventListener('click', placeOrder);
+  $('pfSave').addEventListener('click', saveProduct);
+  $('addProdBtn').addEventListener('click', () => productForm(null));
+  $('cfYes').addEventListener('click', () => S.confirmAction?.());
+
+  addEventListener('popstate', () => { if (S.stack.length) back(); });
+
+  go(new URLSearchParams(location.search).get('v') || 'home', false);
+
+  setTimeout(() => $('splash').classList.add('gone'), 1900);
 }
 
 document.addEventListener('DOMContentLoaded', init);
