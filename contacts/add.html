@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>إضافة جهة اتصال</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>دفتر جهات الاتصال</h1>
+<p class="note">مشروع مقرر CT1552</p>
+
+<div class="menu">
+  <a href="index.html">عرض جهات الاتصال</a>
+  <a href="add.html">إضافة جهة اتصال</a>
+</div>
+
+<div class="msg" id="msg"></div>
+
+<form id="form">
+
+  <label for="name">الاسم</label>
+  <input type="text" id="name" required>
+
+  <label for="phone">رقم الجوال</label>
+  <input type="text" id="phone" required>
+
+  <button type="submit">حفظ</button>
+
+</form>
+
+<script src="db.js"></script>
+<script>
+document.getElementById('form').onsubmit = async function (e) {
+  e.preventDefault();
+
+  const name = document.getElementById('name').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  const msg = document.getElementById('msg');
+
+  if (name === '' || phone === '') {
+    msg.textContent = 'الرجاء تعبئة جميع الحقول';
+    msg.className = 'msg show';
+    return;
+  }
+
+  await addContact(name, phone);
+
+  msg.textContent = 'تمت الإضافة بنجاح';
+  msg.className = 'msg show';
+
+  document.getElementById('form').reset();
+};
+</script>
+
+</body>
+</html>
