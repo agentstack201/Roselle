@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>عرض الدول</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+
+  <h1>نظام تسجيل الدول</h1>
+  <p class="subtitle">مشروع مقرر CT1552</p>
+
+  <nav>
+    <a href="index.html" class="active">عرض الدول</a>
+    <a href="add.html">إضافة دولة</a>
+  </nav>
+
+  <div class="message" id="msg"></div>
+
+  <table id="table">
+    <thead>
+      <tr>
+        <th>الرقم</th>
+        <th>اسم الدولة</th>
+        <th>العاصمة</th>
+        <th>القارة</th>
+        <th>عدد السكان</th>
+        <th>الإجراءات</th>
+      </tr>
+    </thead>
+    <tbody id="tbody">
+      <tr><td colspan="6" class="empty">جارٍ تحميل البيانات...</td></tr>
+    </tbody>
+  </table>
+
+  <footer>عدد الدول المسجلة: <span id="count">0</span></footer>
+
+</div>
+
+<script src="db.js"></script>
+<script>
+function showMessage(text, type) {
+  const m = document.getElementById('msg');
+  m.textContent = text;
+  m.className = 'message ' + type;
+}
+
+async function loadTable() {
+  const tbody = document.getElementById('tbody');
+
+  try {
+    const countries = await getCountries();
+    document.getElementById('count').textContent = countries.length;
+
+    if (countries.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">لا توجد دول مسجلة حتى الآن</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = '';
+    for (const c of countries) {
+      const tr = document.createElement('tr');
+
+      const cells = [
+        c.id,
+        c.name,
+        c.capital,
+        c.continent,
+        c.population ? Number(c.population).toLocaleString('en-US') : '-'
+      ];
+
+      for (const value of cells) {
+        const td = document.createElement('td');
+        td.textContent = value;
+        tr.appendChild(td);
+      }
+
+      const actions = document.createElement('td');
+
+      const edit = document.createElement('a');
+      edit.href = 'edit.html?id=' + c.id;
+      edit.className = 'btn btn-edit';
+      edit.textContent = 'تعديل';
+      actions.appendChild(edit);
+
+      const del = document.createElement('button');
+      del.className = 'btn btn-delete';
+      del.textContent = 'حذف';
+      del.onclick = () => removeCountry(c.id, c.name);
+      actions.appendChild(del);
+
+      tr.appendChild(actions);
+      tbody.appendChild(tr);
+    }
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">تعذر الاتصال بقاعدة البيانات</td></tr>';
+  }
+}
+
+async function removeCountry(id, name) {
+  if (!confirm('هل تريد حذف دولة ' + name + ' ؟')) return;
+
+  try {
+    await deleteCountry(id);
+    showMessage('تم حذف الدولة بنجاح', 'success');
+    loadTable();
+  } catch (e) {
+    showMessage('حدث خطأ أثناء الحذف', 'error');
+  }
+}
+
+loadTable();
+</script>
+
+</body>
+</html>

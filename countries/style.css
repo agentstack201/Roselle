@@ -1,0 +1,188 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Tahoma, Arial, sans-serif;
+  background-color: #f2f4f7;
+  color: #222;
+  direction: rtl;
+  padding: 20px;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  background-color: #ffffff;
+  border: 1px solid #ccc;
+  padding: 25px;
+}
+
+h1 {
+  font-size: 24px;
+  color: #1b4f8a;
+  margin-bottom: 5px;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 20px;
+}
+
+nav {
+  border-bottom: 2px solid #1b4f8a;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
+
+nav a {
+  display: inline-block;
+  padding: 8px 16px;
+  margin-left: 5px;
+  background-color: #e8eef5;
+  color: #1b4f8a;
+  text-decoration: none;
+  font-size: 14px;
+  border: 1px solid #c3d2e3;
+}
+
+nav a:hover {
+  background-color: #d4e0ed;
+}
+
+nav a.active {
+  background-color: #1b4f8a;
+  color: #ffffff;
+  border-color: #1b4f8a;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+th {
+  background-color: #1b4f8a;
+  color: #ffffff;
+  padding: 10px;
+  font-size: 14px;
+  text-align: right;
+  border: 1px solid #1b4f8a;
+}
+
+td {
+  padding: 10px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+}
+
+tr:nth-child(even) td {
+  background-color: #f7f9fb;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+label {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 5px;
+  color: #333;
+}
+
+input,
+select {
+  width: 100%;
+  padding: 9px;
+  font-family: inherit;
+  font-size: 14px;
+  border: 1px solid #aaa;
+  background-color: #fff;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: #1b4f8a;
+}
+
+.btn {
+  display: inline-block;
+  padding: 9px 20px;
+  font-family: inherit;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  margin-left: 5px;
+}
+
+.btn-save {
+  background-color: #1b4f8a;
+  color: #ffffff;
+}
+
+.btn-save:hover {
+  background-color: #16406f;
+}
+
+.btn-edit {
+  background-color: #e0a800;
+  color: #ffffff;
+  padding: 5px 12px;
+  font-size: 13px;
+}
+
+.btn-delete {
+  background-color: #c0392b;
+  color: #ffffff;
+  padding: 5px 12px;
+  font-size: 13px;
+}
+
+.btn-cancel {
+  background-color: #888;
+  color: #ffffff;
+}
+
+.message {
+  padding: 10px;
+  margin-bottom: 15px;
+  font-size: 14px;
+  display: none;
+}
+
+.message.success {
+  background-color: #e3f3e5;
+  border: 1px solid #a3d4a8;
+  color: #1e6b28;
+  display: block;
+}
+
+.message.error {
+  background-color: #fbe4e4;
+  border: 1px solid #e0a0a0;
+  color: #a12020;
+  display: block;
+}
+
+.empty {
+  padding: 30px;
+  text-align: center;
+  color: #777;
+  font-size: 14px;
+}
+
+footer {
+  margin-top: 25px;
+  padding-top: 12px;
+  border-top: 1px solid #ddd;
+  font-size: 12px;
+  color: #888;
+  text-align: center;
+}

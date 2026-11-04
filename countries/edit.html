@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>تعديل دولة</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+
+  <h1>نظام تسجيل الدول</h1>
+  <p class="subtitle">مشروع مقرر CT1552</p>
+
+  <nav>
+    <a href="index.html">عرض الدول</a>
+    <a href="add.html">إضافة دولة</a>
+    <a href="#" class="active">تعديل دولة</a>
+  </nav>
+
+  <div class="message" id="msg"></div>
+
+  <form id="form">
+
+    <div class="form-group">
+      <label for="id">رقم الدولة</label>
+      <input type="text" id="id" readonly>
+    </div>
+
+    <div class="form-group">
+      <label for="name">اسم الدولة</label>
+      <input type="text" id="name" required>
+    </div>
+
+    <div class="form-group">
+      <label for="capital">العاصمة</label>
+      <input type="text" id="capital" required>
+    </div>
+
+    <div class="form-group">
+      <label for="continent">القارة</label>
+      <select id="continent" required>
+        <option>آسيا</option>
+        <option>أفريقيا</option>
+        <option>أوروبا</option>
+        <option>أمريكا الشمالية</option>
+        <option>أمريكا الجنوبية</option>
+        <option>أستراليا</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="population">عدد السكان</label>
+      <input type="number" id="population" min="0" required>
+    </div>
+
+    <button type="submit" class="btn btn-save" id="saveBtn">حفظ التعديل</button>
+    <button type="button" class="btn btn-delete" id="delBtn" style="padding:9px 20px;font-size:14px">حذف</button>
+    <a href="index.html" class="btn btn-cancel">إلغاء</a>
+
+  </form>
+
+</div>
+
+<script src="db.js"></script>
+<script>
+const countryId = new URLSearchParams(location.search).get('id');
+
+function showMessage(text, type) {
+  const m = document.getElementById('msg');
+  m.textContent = text;
+  m.className = 'message ' + type;
+}
+
+async function loadCountry() {
+  if (!countryId) {
+    showMessage('لم يتم تحديد الدولة المراد تعديلها', 'error');
+    return;
+  }
+
+  try {
+    const c = await getCountry(countryId);
+
+    if (!c) {
+      showMessage('الدولة غير موجودة', 'error');
+      return;
+    }
+
+    document.getElementById('id').value = c.id;
+    document.getElementById('name').value = c.name;
+    document.getElementById('capital').value = c.capital;
+    document.getElementById('continent').value = c.continent;
+    document.getElementById('population').value = c.population;
+  } catch (e) {
+    showMessage('تعذر الاتصال بقاعدة البيانات', 'error');
+  }
+}
+
+document.getElementById('form').onsubmit = async function (e) {
+  e.preventDefault();
+
+  const name = document.getElementById('name').value.trim();
+  const capital = document.getElementById('capital').value.trim();
+  const continent = document.getElementById('continent').value;
+  const population = document.getElementById('population').value;
+
+  if (!name || !capital || !continent || population === '') {
+    showMessage('الرجاء تعبئة جميع الحقول', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+
+  try {
+    await updateCountry(countryId, {
+      name: name,
+      capital: capital,
+      continent: continent,
+      population: Number(population)
+    });
+
+    showMessage('تم تعديل بيانات الدولة بنجاح', 'success');
+  } catch (err) {
+    showMessage('حدث خطأ أثناء التعديل', 'error');
+  }
+
+  btn.disabled = false;
+};
+
+document.getElementById('delBtn').onclick = async function () {
+  if (!confirm('هل تريد حذف هذه الدولة ؟')) return;
+
+  try {
+    await deleteCountry(countryId);
+    location.href = 'index.html';
+  } catch (e) {
+    showMessage('حدث خطأ أثناء الحذف', 'error');
+  }
+};
+
+loadCountry();
+</script>
+
+</body>
+</html>
