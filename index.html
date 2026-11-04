@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#722F37">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Roselle">
+  <meta name="application-name" content="Roselle">
+  <meta name="description" content="متجر روزيل للزهور - باقات زهور فاخرة وتنسيقات جميلة">
+  <meta name="format-detection" content="telephone=no">
+
+  <title>Roselle - متجر الزهور</title>
+
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/png" href="/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png">
+  <link rel="apple-touch-icon" sizes="144x144" href="/icons/icon-144.png">
+  <link rel="apple-touch-startup-image" href="/icons/icon-512.png">
+
+  <!-- Google Fonts - Arabic Support -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+
+<!-- SPLASH SCREEN -->
+<div id="splash">
+  <div class="splash-logo">🌹</div>
+  <div class="splash-name">Roselle</div>
+  <div class="splash-tagline">عالم الزهور الفاخرة</div>
+  <div class="splash-dots">
+    <span></span><span></span><span></span>
+  </div>
+</div>
+
+<!-- UPDATE BANNER -->
+<div class="update-banner" id="update-banner">
+  <span>🔄 يتوفر إصدار جديد من التطبيق</span>
+  <button class="update-banner-btn" onclick="applyUpdate()">تحديث الآن</button>
+</div>
+
+<!-- APP SHELL -->
+<div id="app">
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="header-logo">
+      <span>🌹</span> Roselle
+    </div>
+    <div class="header-actions">
+      <button class="header-btn" onclick="navigate('cart')" aria-label="السلة">
+        🛒
+        <span class="cart-badge" id="cart-badge">0</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- INSTALL BANNER -->
+  <div class="install-banner" id="install-banner">
+    <div class="install-banner-icon">📱</div>
+    <div class="install-banner-text">
+      <div class="install-banner-title">ثبّتي تطبيق Roselle</div>
+      <div class="install-banner-sub">وصول سريع من شاشتك الرئيسية</div>
+    </div>
+    <button class="install-banner-btn ripple" id="install-btn">تثبيت</button>
+    <button class="install-banner-close" id="close-install-banner">✕</button>
+  </div>
+
+  <!-- PAGE CONTENT -->
+  <main class="page-content">
+
+    <!-- ===== HOME PAGE ===== -->
+    <div class="page active" id="page-home">
+
+      <!-- Hero -->
+      <section class="hero-section">
+        <div class="hero-flowers">🌸</div>
+        <div class="hero-greeting">مرحباً بك في</div>
+        <div class="hero-title">عالم الزهور الفاخرة 🌹</div>
+        <div class="hero-subtitle">باقات زهور طازجة وتنسيقات أنيقة لكل مناسبة</div>
+        <button class="hero-cta ripple" onclick="navigate('products')">
+          تسوقي الآن <span>←</span>
+        </button>
+      </section>
+
+      <!-- Special Offer -->
+      <div style="height:16px"></div>
+      <div class="offer-banner" onclick="navigate('products')">
+        <div class="offer-text">
+          <h4>عروض خاصة 🎉</h4>
+          <p>اكتشفي أجمل الباقات بأسعار مميزة</p>
+        </div>
+        <div class="offer-icon">🌺</div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-row" id="home-stats">
+        <div class="stat-card">
+          <div class="stat-icon">🌸</div>
+          <div class="stat-value">—</div>
+          <div class="stat-label">منتج متاح</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📦</div>
+          <div class="stat-value">—</div>
+          <div class="stat-label">طلب مكتمل</div>
+        </div>
+      </div>
+
+      <!-- Featured Products -->
+      <div class="section-title">
+        المنتجات المميزة
+        <a onclick="navigate('products')">عرض الكل ←</a>
+      </div>
+      <div class="products-grid" id="home-products-grid">
+        <!-- Products loaded dynamically -->
+        <div class="loading" style="grid-column:1/-1">
+          <div class="spinner"></div>
+          <p>جارٍ التحميل...</p>
+        </div>
+      </div>
+      <div style="height:16px"></div>
+    </div>
+
+    <!-- ===== PRODUCTS PAGE ===== -->
+    <div class="page" id="page-products">
+      <div style="padding: 16px 0 8px">
+        <div style="font-size:13px;color:var(--text-secondary);padding:0 20px 12px">تصفحي جميع منتجاتنا</div>
+        <div class="categories-scroll" id="category-chips">
+          <button class="cat-chip active" data-cat="الكل">الكل</button>
+        </div>
+      </div>
+      <div class="products-grid" id="products-grid">
+        <div class="loading" style="grid-column:1/-1">
+          <div class="spinner"></div>
+          <p>جارٍ تحميل المنتجات...</p>
+        </div>
+      </div>
+      <div style="height:16px"></div>
+    </div>
+
+    <!-- ===== CART PAGE ===== -->
+    <div class="page" id="page-cart">
+      <div class="cart-empty" id="cart-empty" style="display:flex">
+        <div class="cart-empty-icon">🛒</div>
+        <h3>سلتك فارغة</h3>
+        <p>أضيفي منتجات من متجرنا لتبدئي التسوق</p>
+        <button class="btn-primary" style="max-width:220px" onclick="navigate('products')">تصفحي المنتجات 🌸</button>
+      </div>
+
+      <div id="cart-items" style="display:none"></div>
+
+      <div id="cart-summary" style="display:none;padding:16px 16px 0">
+        <div class="summary-row">
+          <span>المجموع الفرعي</span>
+          <span class="amount" id="cart-subtotal">0 ر.س</span>
+        </div>
+        <div class="summary-row">
+          <span>رسوم التوصيل</span>
+          <span class="amount" id="cart-delivery">15.00 ر.س</span>
+        </div>
+        <div class="summary-row total">
+          <span>الإجمالي</span>
+          <span class="amount" id="cart-total">0 ر.س</span>
+        </div>
+      </div>
+
+      <!-- Checkout Form -->
+      <div id="checkout-section" style="display:none">
+        <div class="checkout-form">
+          <div class="form-section-title">📋 بيانات التوصيل</div>
+
+          <div class="form-group">
+            <label class="form-label">الاسم الكامل *</label>
+            <input class="form-input" id="customer-name" type="text" placeholder="أدخلي اسمك الكامل"
+              value="">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">رقم الجوال *</label>
+            <input class="form-input" id="customer-phone" type="tel" placeholder="05xxxxxxxx">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">عنوان التوصيل *</label>
+            <input class="form-input" id="customer-address" type="text" placeholder="المدينة، الحي، الشارع">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">ملاحظات إضافية</label>
+            <textarea class="form-input form-textarea" id="order-notes" placeholder="أي ملاحظات خاصة بالطلب..."></textarea>
+          </div>
+
+          <button class="btn-primary ripple" id="place-order-btn" onclick="placeOrder()">
+            ✅ تأكيد الطلب
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== ORDERS PAGE ===== -->
+    <div class="page" id="page-orders">
+      <div style="padding:16px 20px 8px;font-size:13px;color:var(--text-secondary)">
+        تتبعي طلباتك وقومي بإدارتها
+      </div>
+      <div class="orders-list" id="orders-container">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>جارٍ تحميل الطلبات...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== ACCOUNT PAGE ===== -->
+    <div class="page" id="page-account">
+      <div class="account-header">
+        <div class="account-avatar">👤</div>
+        <div class="account-name" id="account-name-display">زائر</div>
+        <div class="account-email" id="account-email-display">قم بتسجيل أول طلب</div>
+      </div>
+
+      <div class="account-menu">
+        <div class="menu-item" onclick="navigate('orders')">
+          <div class="menu-item-icon">📦</div>
+          <div class="menu-item-info">
+            <div class="menu-item-title">طلباتي</div>
+            <div class="menu-item-sub">
+              <span id="account-orders-count">—</span> طلب
+            </div>
+          </div>
+          <span class="menu-item-arrow">←</span>
+        </div>
+
+        <div class="menu-item" onclick="openManageProducts()">
+          <div class="menu-item-icon">🌸</div>
+          <div class="menu-item-info">
+            <div class="menu-item-title">إدارة المنتجات</div>
+            <div class="menu-item-sub">إضافة وتعديل وحذف المنتجات</div>
+          </div>
+          <span class="menu-item-arrow">←</span>
+        </div>
+
+        <div class="menu-item" onclick="navigate('cart')">
+          <div class="menu-item-icon">🛒</div>
+          <div class="menu-item-info">
+            <div class="menu-item-title">سلة المشتريات</div>
+            <div class="menu-item-sub">عرض ما في السلة</div>
+          </div>
+          <span class="menu-item-arrow">←</span>
+        </div>
+
+        <div class="menu-item" onclick="showToast('📞 للتواصل: 920000000', '')">
+          <div class="menu-item-icon">📞</div>
+          <div class="menu-item-info">
+            <div class="menu-item-title">تواصلي معنا</div>
+            <div class="menu-item-sub">920000000</div>
+          </div>
+          <span class="menu-item-arrow">←</span>
+        </div>
+
+        <div class="menu-item" onclick="showAbout()">
+          <div class="menu-item-icon">ℹ️</div>
+          <div class="menu-item-info">
+            <div class="menu-item-title">عن التطبيق</div>
+            <div class="menu-item-sub">Roselle v1.0 - متجر الزهور</div>
+          </div>
+          <span class="menu-item-arrow">←</span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- BOTTOM NAVIGATION -->
+  <nav class="bottom-nav" aria-label="التنقل الرئيسي">
+    <button class="nav-item active" data-page="home" aria-label="الرئيسية">
+      <div class="nav-icon">🏠</div>
+      <span class="nav-label">الرئيسية</span>
+    </button>
+    <button class="nav-item" data-page="products" aria-label="المنتجات">
+      <div class="nav-icon">🌸</div>
+      <span class="nav-label">المنتجات</span>
+    </button>
+    <button class="nav-item" data-page="cart" aria-label="السلة">
+      <div class="nav-icon">
+        🛒
+        <span class="nav-badge" id="cart-nav-badge">0</span>
+      </div>
+      <span class="nav-label">السلة</span>
+    </button>
+    <button class="nav-item" data-page="orders" aria-label="طلباتي">
+      <div class="nav-icon">📦</div>
+      <span class="nav-label">طلباتي</span>
+    </button>
+    <button class="nav-item" data-page="account" aria-label="حسابي">
+      <div class="nav-icon">👤</div>
+      <span class="nav-label">حسابي</span>
+    </button>
+  </nav>
+
+</div><!-- /app -->
+
+<!-- TOAST -->
+<div class="toast" id="toast" role="alert" aria-live="polite"></div>
+
+<!-- OVERLAY -->
+<div class="overlay" id="overlay"></div>
+
+<!-- PRODUCT DETAIL SHEET -->
+<div class="bottom-sheet" id="product-detail-sheet" aria-modal="true" role="dialog">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">
+    تفاصيل المنتج
+    <button onclick="closeSheet('product-detail-sheet')" style="float:left;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-light)">✕</button>
+  </div>
+  <div class="sheet-content" id="product-detail-content"></div>
+</div>
+
+<!-- ORDER DETAIL SHEET -->
+<div class="bottom-sheet" id="order-detail-sheet" aria-modal="true" role="dialog">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">
+    تفاصيل الطلب
+    <button onclick="closeSheet('order-detail-sheet')" style="float:left;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-light)">✕</button>
+  </div>
+  <div class="sheet-content" id="order-detail-content"></div>
+</div>
+
+<!-- MANAGE PRODUCTS SHEET -->
+<div class="bottom-sheet" id="manage-products-sheet" aria-modal="true" role="dialog">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">
+    إدارة المنتجات
+    <button onclick="closeSheet('manage-products-sheet')" style="float:left;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-light)">✕</button>
+  </div>
+  <div class="sheet-content admin-section" id="manage-products-content"></div>
+</div>
+
+<!-- PRODUCT FORM SHEET -->
+<div class="bottom-sheet" id="product-form-sheet" aria-modal="true" role="dialog">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="product-form-title">
+    إضافة منتج
+    <button onclick="closeSheet('product-form-sheet')" style="float:left;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-light)">✕</button>
+  </div>
+  <div class="sheet-content">
+    <input type="hidden" id="product-form-id">
+
+    <div class="form-group">
+      <label class="form-label">اسم المنتج (عربي) *</label>
+      <input class="form-input" id="product-form-name-ar" type="text" placeholder="مثال: باقة الورود الحمراء">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">اسم المنتج (إنجليزي)</label>
+      <input class="form-input" id="product-form-name-en" type="text" placeholder="Red Roses Bouquet" dir="ltr">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">السعر (ر.س) *</label>
+      <input class="form-input" id="product-form-price" type="number" placeholder="0.00" min="0" step="0.01" dir="ltr">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">المخزون</label>
+      <input class="form-input" id="product-form-stock" type="number" placeholder="10" min="0" dir="ltr">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">التصنيف</label>
+      <select class="form-input" id="product-form-category">
+        <option value="باقات">باقات</option>
+        <option value="تنسيقات">تنسيقات</option>
+        <option value="نباتات">نباتات</option>
+        <option value="هدايا">هدايا</option>
+        <option value="مناسبات">مناسبات</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">وصف المنتج (عربي)</label>
+      <textarea class="form-input form-textarea" id="product-form-desc-ar" placeholder="وصف المنتج..."></textarea>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">رابط الصورة</label>
+      <input class="form-input" id="product-form-image" type="url" placeholder="https://..." dir="ltr">
+    </div>
+
+    <button class="btn-primary ripple" id="save-product-btn" onclick="saveProduct()">💾 حفظ المنتج</button>
+    <div style="height:16px"></div>
+  </div>
+</div>
+
+<script src="/js/supabase-client.js"></script>
+<script src="/js/app.js"></script>
+<script>
+function showAbout() {
+  showToast('🌹 Roselle v1.0 | متجر الزهور الفاخرة', '');
+}
+</script>
+</body>
+</html>
